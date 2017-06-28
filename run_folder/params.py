@@ -80,7 +80,7 @@ boundary_conditions = dict(in_x = 'periodic',
                           )
 
 # Resolution in velocity space:
-velocity_space = dict(N_vel_x   = 128,
+velocity_space = dict(N_vel_x   = 64,
                       vel_x_max = 9.0, 
 
                       N_vel_y   = 1, 
@@ -91,8 +91,8 @@ velocity_space = dict(N_vel_x   = 128,
                      )
 
 time = dict(
-            final_time   = 100.0,
-            dt           = 0.1
+            final_time   = 1.0,
+            dt           = 0.001
            )
 
 # charge_ion makes no difference currently(In development)
@@ -105,5 +105,5 @@ EM_fields = dict(
 # Only BGK collision operator has been implemented so far.
 collisions = dict(
                   collision_operator = 'BGK',
-                  tau                = np.inf
+                  tau                = 0.001 #np.inf
                  )
