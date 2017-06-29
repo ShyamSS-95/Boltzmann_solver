@@ -164,28 +164,31 @@ def time_integration(da, da_fields, args, time_array):
     # Advection in position space:
     args.f = f_interp_2d(da, args, 0.25*dt)
     args.f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
+    # args.f = af.select(args.f<1e-12, 1e-12, args.f)
     # Collision-Step:
     args.f = collision_step_BGK(da, args, 0.5*dt)
     args.f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
+    # args.f = af.select(args.f<1e-12, 1e-12, args.f)
     # Advection in position space:
     args.f = f_interp_2d(da, args, 0.25*dt)
     args.f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
+    # args.f = af.select(args.f<1e-12, 1e-12, args.f)
     # Fields Step(Advection in velocity space):
     args   = fields_step(da_fields, args, local_field, glob_field, dt)
     args.f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
-    print(af.min(args.f))
+    # args.f = af.select(args.f<1e-12, 1e-12, args.f)
     # Advection in position space:
     args.f = f_interp_2d(da, args, 0.25*dt)
     args.f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
-    print(af.min(args.f))
+    # args.f = af.select(args.f<1e-12, 1e-12, args.f)
     # Collision-Step:
     args.f = collision_step_BGK(da, args, 0.5*dt)
     args.f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
-    print(af.min(args.f))
+    # args.f = af.select(args.f<1e-12, 1e-12, args.f)
     # Advection in position space:
     args.f = f_interp_2d(da, args, 0.25*dt)
     args.f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
-    print(af.min(args.f))
+    # args.f = af.select(args.f<1e-12, 1e-12, args.f)
     
     # Convert to velocitiesExpanded:
     args.f = non_linear_solver.convert.to_velocitiesExpanded(da, args.config, args.f)

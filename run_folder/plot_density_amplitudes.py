@@ -56,7 +56,7 @@ h5f.close()
 # f_ck = np.swapaxes(f_ck, 4, 2)
 
 pl.plot(time_ck, amplitude_ck, label = 'CK')
-# pl.semilogy(time_lt, amplitude_lt, '--', color = 'black', label = 'LT')
+pl.plot(time_lt, amplitude_lt, '--', color = 'black', label = 'LT')
 
 # x = (0.5 + np.arange(128))*(1/128)
 # v = -9 + (0.5 + np.arange(64))*(18/64)

@@ -6,6 +6,7 @@
 
 import arrayfire as af
 import non_linear_solver.convert
+from scipy.fftpack import fftfreq
 
 def f_interp_2d(da, args, dt):
   # Since the interpolation function are being performed in position space,
@@ -71,24 +72,34 @@ def f_interp_vel_3d(args, F_x, F_y, F_z, dt):
   # vel_y_interpolant = (vel_y_new - af.sum(vel_y[0, 0, 0, 0]))/config.dv_y
   # vel_z_interpolant = (vel_z_new - af.sum(vel_z[0, 0, 0, 0]))/config.dv_z
 
-  vel_x_interpolant = af.select(vel_x_interpolant<0, 0, vel_x_interpolant)
-  vel_x_interpolant = af.select(vel_x_interpolant>config.N_vel_x - 1, config.N_vel_x - 1, vel_x_interpolant)
+  # vel_x_interpolant = af.select(vel_x_interpolant<0, 0, vel_x_interpolant)
+  # vel_x_interpolant = af.select(vel_x_interpolant>config.N_vel_x - 1, config.N_vel_x - 1, vel_x_interpolant)
 
   # print('1', af.where(vel_x_interpolant<0).elements())
   # print('2', af.where(vel_x_interpolant>config.N_vel_x - 1).elements())
-  print(af.min(f))
+  # print(af.min(f))
 
   # We perform the 3d interpolation by performing individual 1d + 2d interpolations:
   # Reordering to bring the variation in values along axis 0 and axis 1
 
   # Reordering from f(Ny*Nx, vel_y, vel_x, vel_z)     --> f(vel_y, Ny*Nx, vel_x, vel_z)
   # Reordering from vel_y(Ny*Nx, vel_y, vel_x, vel_z) --> vel_y(vel_y, Ny*Nx, vel_x, vel_z)
+
+  # k_v = af.to_array(fftfreq(f.shape[2], config.dv_x))
+  # k_v = af.Array.as_type(k_v, af.Dtype.c64)
+
+  # f_hat = af.fft(af.reorder(f, 2, 3, 1, 0))
+  # k_v   = af.tile(k_v, 1, f_hat.shape[1], f_hat.shape[2], f_hat.shape[3])
+  # force = af.reorder(F_x/config.dv_x * config.dt, 2, 3, 1, 0)
+  # f_hat = f_hat*af.exp(-1j*force*k_v)
+  # f     = af.real(af.ifft(f_hat))
+
   f = af.approx1(af.reorder(f, 2, 3, 1, 0),\
                  af.reorder(vel_x_interpolant, 2, 3, 1, 0),\
                  af.INTERP.CUBIC_SPLINE
                 )
 
-  print(af.min(f))
+  # print(af.min(f))
   
   # Reordering from f(vel_y, Ny*Nx, vel_x, vel_z)     --> f(vel_x, vel_z, Ny*Nx, vel_y)
   # Reordering from vel_x(Ny*Nx, vel_y, vel_x, vel_z) --> vel_x(vel_x, vel_z, Ny*Nx, vel_y)
@@ -101,7 +112,7 @@ def f_interp_vel_3d(args, F_x, F_y, F_z, dt):
 
   # Reordering back to the original convention(velocitiesExpanded):
   # Reordering from f(vel_x, vel_z, Ny*Nx, vel_y) --> f(Ny*Nx, vel_y, vel_x, vel_z)
-  f = af.reorder(f, 2, 3, 0, 1)
+  f = af.reorder(f, 2, 3, 1, 0)
 
   af.eval(f)
   return(f)
