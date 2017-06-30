@@ -42,6 +42,9 @@ def f_interp_2d(da, args, dt):
   x_interpolant = (x_center_new - left_boundary)/config.dx + N_ghost
   y_interpolant = (y_center_new - bot_boundary )/config.dy + N_ghost
 
+  # f_int = f - (vel_x*dt)/config.dx * (f - af.shift(f, 0, 1, 0, 0))
+  # f     = f - (vel_x*dt)/config.dx * (f_int - af.shift(f_int, 0, 1, 0, 0))
+
   f = af.approx2(f,\
                  y_interpolant,\
                  x_interpolant,\
@@ -59,13 +62,16 @@ def f_interp_vel_3d(args, F_x, F_y, F_z, dt):
   
   # args.vel_x,y,z are already in velocitiesExpanded form
   vel_x = args.vel_x
-  vel_y = args.vel_y
-  vel_z = args.vel_z
+  # vel_y = args.vel_y
+  # vel_z = args.vel_z
+
+  # f_int = f - (F_x*dt)/config.dv_x * (f - af.shift(f, 0, 0, 1, 0))
+  # f     = f - (F_x*dt)/config.dv_x * (f_int - af.shift(f_int, 0, 0, 1, 0))
 
   # F_x,y,z need to be passed in velocitiesExpanded form
   vel_x_new = vel_x - dt * F_x
-  vel_y_new = vel_y - dt * F_y
-  vel_z_new = vel_z - dt * F_z
+  # vel_y_new = vel_y - dt * F_y
+  # vel_z_new = vel_z - dt * F_z
 
   # Transforming vel_interpolant to go from [0, N_vel - 1]:
   vel_x_interpolant = (vel_x_new - af.sum(vel_x[0, 0, 0, 0]))/config.dv_x
