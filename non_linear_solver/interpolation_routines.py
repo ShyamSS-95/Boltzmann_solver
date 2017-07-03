@@ -91,19 +91,19 @@ def f_interp_vel_3d(args, F_x, F_y, F_z, dt):
   # Reordering from f(Ny*Nx, vel_y, vel_x, vel_z)     --> f(vel_y, Ny*Nx, vel_x, vel_z)
   # Reordering from vel_y(Ny*Nx, vel_y, vel_x, vel_z) --> vel_y(vel_y, Ny*Nx, vel_x, vel_z)
 
-  # k_v = af.to_array(fftfreq(f.shape[2], config.dv_x))
-  # k_v = af.Array.as_type(k_v, af.Dtype.c64)
+  k_v = af.to_array(fftfreq(f.shape[2], config.dv_x))
+  k_v = af.Array.as_type(k_v, af.Dtype.c64)
 
-  # f_hat = af.fft(af.reorder(f, 2, 3, 1, 0))
-  # k_v   = af.tile(k_v, 1, f_hat.shape[1], f_hat.shape[2], f_hat.shape[3])
-  # force = af.reorder(F_x/config.dv_x * config.dt, 2, 3, 1, 0)
-  # f_hat = f_hat*af.exp(-1j*force*k_v)
-  # f     = af.real(af.ifft(f_hat))
+  f_hat = af.fft(af.reorder(f, 2, 3, 1, 0))
+  k_v   = af.tile(k_v, 1, f_hat.shape[1], f_hat.shape[2], f_hat.shape[3])
+  force = af.reorder(F_x/config.dv_x * config.dt, 2, 3, 1, 0)
+  f_hat = f_hat*af.exp(-1j*force*k_v)
+  f     = af.real(af.ifft(f_hat))
 
-  f = af.approx1(af.reorder(f, 2, 3, 1, 0),\
-                 af.reorder(vel_x_interpolant, 2, 3, 1, 0),\
-                 af.INTERP.CUBIC_SPLINE
-                )
+  # f = af.approx1(af.reorder(f, 2, 3, 1, 0),\
+  #                af.reorder(vel_x_interpolant, 2, 3, 1, 0),\
+  #                af.INTERP.CUBIC_SPLINE
+  #               )
 
   # print(af.min(f))
   
@@ -118,7 +118,7 @@ def f_interp_vel_3d(args, F_x, F_y, F_z, dt):
 
   # Reordering back to the original convention(velocitiesExpanded):
   # Reordering from f(vel_x, vel_z, Ny*Nx, vel_y) --> f(Ny*Nx, vel_y, vel_x, vel_z)
-  f = af.reorder(f, 2, 3, 1, 0)
+  # f = af.reorder(f, 2, 3, 1, 0)
 
   af.eval(f)
   return(f)
