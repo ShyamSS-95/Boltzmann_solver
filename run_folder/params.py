@@ -79,7 +79,7 @@ velocity_space = dict(N_vel_x   = 32,
 
 time = dict(
             final_time   = 1.0,
-            dt           = 0.001 #*(32/position_space['N_x'])
+            dt           = 0.01 #*(32/position_space['N_x'])
            )
 
 EM_fields = dict(

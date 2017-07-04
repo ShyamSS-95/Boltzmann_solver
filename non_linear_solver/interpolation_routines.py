@@ -5,6 +5,7 @@
 # velocitiesExpanded form : (Ny*Nx, Nvy, Nvx, Nvz, 1)
 
 import arrayfire as af
+import numpy as np
 import non_linear_solver.convert
 from scipy.fftpack import fftfreq
 
@@ -42,6 +43,17 @@ def f_interp_2d(da, args, dt):
   x_interpolant = (x_center_new - left_boundary)/config.dx + N_ghost
   y_interpolant = (y_center_new - bot_boundary )/config.dy + N_ghost
 
+  # f = af.reorder(f)
+  # k = af.to_array(fftfreq(f.shape[0], config.dx))
+  # k = af.Array.as_type(k, af.Dtype.c64)
+
+  # f_hat   = af.fft(f)
+  # k       = af.tile(k, 1, f_hat.shape[1], f_hat.shape[2], 1)
+  # force   = af.reorder(vel_x * config.dt)
+  # f_hat   = f_hat*af.exp(-2*np.pi*1j*force*k)
+  # f       = af.real(af.ifft(f_hat))
+  # f       = af.reorder(f)
+  
   # f_int = f - (vel_x*dt)/config.dx * (f - af.shift(f, 0, 1, 0, 0))
   # f     = f - (vel_x*dt)/config.dx * (f_int - af.shift(f_int, 0, 1, 0, 0))
 
@@ -96,8 +108,8 @@ def f_interp_vel_3d(args, F_x, F_y, F_z, dt):
 
   f_hat = af.fft(af.reorder(f, 2, 3, 1, 0))
   k_v   = af.tile(k_v, 1, f_hat.shape[1], f_hat.shape[2], f_hat.shape[3])
-  force = af.reorder(F_x/config.dv_x * config.dt, 2, 3, 1, 0)
-  f_hat = f_hat*af.exp(-1j*force*k_v)
+  force = af.reorder(F_x * config.dt, 2, 3, 1, 0)
+  f_hat = f_hat*af.exp(-2*np.pi*1j*force*k_v)
   f     = af.real(af.ifft(f_hat))
 
   # f = af.approx1(af.reorder(f, 2, 3, 1, 0),\
@@ -118,7 +130,7 @@ def f_interp_vel_3d(args, F_x, F_y, F_z, dt):
 
   # Reordering back to the original convention(velocitiesExpanded):
   # Reordering from f(vel_x, vel_z, Ny*Nx, vel_y) --> f(Ny*Nx, vel_y, vel_x, vel_z)
-  # f = af.reorder(f, 2, 3, 1, 0)
+  f = af.reorder(f, 2, 3, 1, 0)
 
   af.eval(f)
   return(f)

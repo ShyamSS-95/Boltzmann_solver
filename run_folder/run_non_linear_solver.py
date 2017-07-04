@@ -59,7 +59,7 @@ da = PETSc.DMDA().create([N_y, N_x],\
                         ) 
 
 da_fields = PETSc.DMDA().create([N_y, N_x],\
-                                dof = 1,\
+                                dof = 6,\
                                 stencil_width = N_ghost,\
                                 boundary_type = da.getBoundaryType(),\
                                 proc_sizes = da.getProcSizes(), \
@@ -140,12 +140,12 @@ rho_array = np.array(rho_array)[N_ghost:-N_ghost,\
                                ]
 
 # This function returns the values of fields at (i + 0.5, j + 0.5)
-args.E_x, args.E_y =\
-solve_electrostatic_fields(da_fields, config, rho_array)
+# args.E_x, args.E_y =\
+# solve_electrostatic_fields(da_fields, config, rho_array)
 
 # Interpolating to obtain the values at the Yee-Grid
-args.E_x = 0.5 * (args.E_x + af.shift(args.E_x, 1, 0)) #(i+0.5, j)
-args.E_y = 0.5 * (args.E_y + af.shift(args.E_y, 0, 1)) #(i, j+0.5)
+# args.E_x = 0.5 * (args.E_x + af.shift(args.E_x, 1, 0)) #(i+0.5, j)
+# args.E_y = 0.5 * (args.E_y + af.shift(args.E_y, 0, 1)) #(i, j+0.5)
 
 # We define da_fields with dof = 6 to allow application of boundary conditions
 # for all the fields quantities in a single step.
@@ -163,6 +163,8 @@ if(config.fields_solver == 'fdtd'):
 args.f = non_linear_solver.convert.to_positionsExpanded(da, args.config, args.f)
 
 # The following quantities are defined on the Yee-Grid:
+args.E_x = af.constant(0, x_left.shape[0], y_bottom.shape[1], dtype=af.Dtype.f64)
+args.E_y = af.constant(0, x_left.shape[0], y_bottom.shape[1], dtype=af.Dtype.f64)
 args.E_z = af.constant(0, x_left.shape[0], y_bottom.shape[1], dtype=af.Dtype.f64)
 args.B_x = af.constant(0, x_left.shape[0], y_center.shape[1], dtype=af.Dtype.f64)
 args.B_y = af.constant(0, x_center.shape[0], y_bottom.shape[1], dtype=af.Dtype.f64)
