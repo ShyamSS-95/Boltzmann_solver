@@ -36,12 +36,12 @@ background_ions = dict(
 perturbation = dict(
                     pert_real = 0.04, 
                     pert_imag = 0,
-                    k_x       = 0.5,
+                    k_x       = 0.3,
                     k_y       = 0*np.pi,\
                    ) 
 
 # Resolution in position space:
-position_space = dict(N_x     = 32,
+position_space = dict(N_x     = 128,
                       x_start = 0,
                       x_end   = 20*np.pi,
 
@@ -80,7 +80,7 @@ boundary_conditions = dict(in_x = 'periodic',
                           )
 
 # Resolution in velocity space:
-velocity_space = dict(N_vel_x   = 32,
+velocity_space = dict(N_vel_x   = 128,
                       vel_x_max = 9.0, 
 
                       N_vel_y   = 1, 
@@ -91,14 +91,14 @@ velocity_space = dict(N_vel_x   = 32,
                      )
 
 time = dict(
-            final_time   = 2.0,
-            dt           = 0.1
+            final_time   = 100.0,
+            dt           = 0.001
            )
 
 # charge_ion makes no difference currently(In development)
 EM_fields = dict(
-                 charge_electron = -10,
-                 charge_ion      = 10, 
+                 charge_electron = -1,
+                 charge_ion      = 1, 
                  solver          = 'electrostatic'
                 )
 

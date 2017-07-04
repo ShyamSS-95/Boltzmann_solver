@@ -75,7 +75,7 @@ for i in range(len(config)):
                           ) 
 
   da_fields = PETSc.DMDA().create([N_y, N_x],\
-                                  dof = 1,\
+                                  dof = 6,\
                                   stencil_width = N_ghost,\
                                   boundary_type = da.getBoundaryType(),\
                                   proc_sizes = da.getProcSizes(), \

@@ -61,7 +61,7 @@ h5f.close()
 # f_ck1 = np.swapaxes(f_ck1, 0, 1).reshape(f_lt.shape[0], f_lt.shape[1], f_lt.shape[4], f_lt.shape[3], f_lt.shape[2])
 # f_ck1 = np.swapaxes(f_ck1, 4, 2)
 
-pl.plot(time_ck[:15], amplitude_ck[:15], label = 'CK')
+pl.plot(time_ck, amplitude_ck, label = 'CK')
 # pl.plot(time_lt, amplitude_lt, '--', color = 'black', label = 'LT')
 
 # x = (0.5 + np.arange(32))*(1/32)
