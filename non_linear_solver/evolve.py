@@ -229,7 +229,19 @@ def time_integration(da, da_fields, args, time_array):
 
     data[time_index + 1] = af.sum(args.E_x**2)
 
-    # Convert to positionsExpanded:
+    f = af.exp(args.log_f)
+    f = af.reorder(f, 0, 2, 1, 3)[:, :, 0, 0]
+    f = af.moddims(f, 134, 9, 128)
+    f = np.array(af.reorder(f, 0, 2, 1)[:, :, 0])
+
+    pl.contourf(f, 100)
+    pl.colorbar()
+    pl.xlabel(r'$x$')
+    pl.ylabel(r'$v$')
+    pl.title('Time =' + str(t0))
+    pl.savefig('images/' + '%04d'%time_index + '.png')
+    
+  # Convert to positionsExpanded:
     args.log_f = non_linear_solver.convert.to_positionsExpanded(da, args.config, args.log_f)
 
     print(af.max(args.log_f))
