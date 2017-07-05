@@ -41,7 +41,7 @@ perturbation = dict(
                    ) 
 
 # Resolution in position space:
-position_space = dict(N_x     = 128,
+position_space = dict(N_x     = 32,
                       x_start = 0,
                       x_end   = 20*np.pi,
 
@@ -80,7 +80,7 @@ boundary_conditions = dict(in_x = 'periodic',
                           )
 
 # Resolution in velocity space:
-velocity_space = dict(N_vel_x   = 128,
+velocity_space = dict(N_vel_x   = 32,
                       vel_x_max = 9.0, 
 
                       N_vel_y   = 1, 
@@ -91,8 +91,8 @@ velocity_space = dict(N_vel_x   = 128,
                      )
 
 time = dict(
-            final_time   = 100.0,
-            dt           = 0.001
+            final_time   = 100,
+            dt           = 0.01
            )
 
 # charge_ion makes no difference currently(In development)

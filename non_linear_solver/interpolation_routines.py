@@ -7,6 +7,7 @@
 import arrayfire as af
 import numpy as np
 import non_linear_solver.convert
+from scipy.fftpack import fftfreq
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 def f_interp_2d(da, args, dt):
@@ -70,8 +71,8 @@ def f_interp_vel_3d(args, F_x, F_y, F_z, dt):
   # vel_y_interpolant = (vel_y_new - af.sum(vel_y[0, 0, 0, 0]))/config.dv_y
   # vel_z_interpolant = (vel_z_new - af.sum(vel_z[0, 0, 0, 0]))/config.dv_z
 
-  for i in range(vel_x.shape[0]):
-    args.log_f[i, 0, :, 0] = af.to_array((InterpolatedUnivariateSpline(np.array(vel_x[i, 0, :, 0]), np.array(args.log_f[i, 0, :, 0]), k = 5))(np.array(vel_x_new[i, 0, :, 0])))
+  # for i in range(vel_x.shape[0]):
+  #   args.log_f[i, 0, :, 0] = af.to_array((InterpolatedUnivariateSpline(np.array(vel_x[i, 0, :, 0]), np.array(args.log_f[i, 0, :, 0]), k = 5))(np.array(vel_x_new[i, 0, :, 0])))
   # We perform the 3d interpolation by performing individual 1d + 2d interpolations:
   # Reordering to bring the variation in values along axis 0 and axis 1
 
@@ -96,6 +97,18 @@ def f_interp_vel_3d(args, F_x, F_y, F_z, dt):
   # Reordering back to the original convention(velocitiesExpanded):
   # Reordering from f(vel_x, vel_z, Ny*Nx, vel_y) --> f(Ny*Nx, vel_y, vel_x, vel_z)
   # args.log_f = af.reorder(args.log_f, 2, 3, 0, 1)
+
+  f   = args.log_f
+  k_v = af.to_array(fftfreq(f.shape[2], config.dv_x))
+  k_v = af.Array.as_type(k_v, af.Dtype.c64)
+
+  f_hat = af.fft(af.reorder(f, 2, 3, 1, 0))
+  k_v   = af.tile(k_v, 1, f_hat.shape[1], f_hat.shape[2], f_hat.shape[3])
+  force = af.reorder(F_x * config.dt, 2, 3, 1, 0)
+  f_hat = f_hat*af.exp(-2*np.pi*1j*force*k_v)
+  
+  args.log_f = af.real(af.ifft(f_hat))
+  args.log_f = af.reorder(args.log_f, 2, 3, 1, 0)
 
   af.eval(args.log_f)
   return(args.log_f)

@@ -52,34 +52,35 @@ h5f.close()
 # f_ck1 = h5f['distribution_function'][:]
 # h5f.close()
 
-# h5f  = h5py.File('lt_distribution_function.h5', 'r')
-# f_lt = h5f['distribution_function'][:]
-# h5f.close()
+h5f  = h5py.File('lt_distribution_function.h5', 'r')
+f_lt = h5f['distribution_function'][:]
+h5f.close()
 
 # f_ck = np.swapaxes(f_ck, 0, 1).reshape(f_lt.shape[0], f_lt.shape[1], f_lt.shape[4], f_lt.shape[3], f_lt.shape[2])
 # f_ck = np.swapaxes(f_ck, 4, 2)
 # f_ck1 = np.swapaxes(f_ck1, 0, 1).reshape(f_lt.shape[0], f_lt.shape[1], f_lt.shape[4], f_lt.shape[3], f_lt.shape[2])
 # f_ck1 = np.swapaxes(f_ck1, 4, 2)
 
-pl.plot(time_ck, amplitude_ck, label = 'CK')
+pl.plot(time_ck[:400], amplitude_ck[:400], label = 'CK')
 # pl.plot(time_lt, amplitude_lt, '--', color = 'black', label = 'LT')
 
-# x = (0.5 + np.arange(32))*(1/32)
-# v = -9 + (0.5 + np.arange(64))*(18/64)
+x = (0.5 + np.arange(32))*(1/32)
+v = -9 + (0.5 + np.arange(32))*(18/32)
 
-# x, v = np.meshgrid(x, v)
+x, v = np.meshgrid(x, v)
 # f_ck = np.swapaxes(f_ck, 0, 3)
 # f_ck1 = np.swapaxes(f_ck1, 0, 3)
 
 pl.xlabel('Time')
-pl.ylabel(r'$MIN(\delta \rho(x))$')
+pl.ylabel(r'$MAX(\delta \rho(x))$')
 pl.legend()
+
 # # f_test = np.zeros_like(f_ck[:, :, 0, 0, 0])
 # # f_test = np.where(f_ck[:, :, 0, 0, 0]<0, 1, f_test)
 
-# pl.contourf(x, v, abs(f_ck[:, :, 0, 0, 0] - f_ck1[:, :, 0, 0, 0]), 100)
+# pl.contourf(x, v, abs(f_ck1[:, :, 0, 0, 0]), 100)
 # pl.colorbar()
 # pl.xlabel(r'$x$')
 # pl.ylabel(r'$v$')
-# pl.title('Time = 0.08')
+# pl.title('Time = 17.3')
 pl.savefig('plot.png')
