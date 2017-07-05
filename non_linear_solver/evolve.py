@@ -193,7 +193,10 @@ def time_integration(da, da_fields, args, time_array):
 
   # Convert to positionsExpanded:
   args.log_f = non_linear_solver.convert.to_positionsExpanded(da, args.config, args.log_f)
+  x = (0.5 + np.arange(128))*(1/128)
+  v = -9 + (0.5 + np.arange(128))*(18/128)
 
+  x, v = np.meshgrid(x, v)
   for time_index, t0 in enumerate(time_array[1:]):
     # Printing progress every 10 iterations
     # Printing only at rank = 0 to avoid multiple outputs:
@@ -225,24 +228,24 @@ def time_integration(da, da_fields, args, time_array):
     # args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     
     # Convert to velocitiesExpanded:
-    args.log_f = non_linear_solver.convert.to_velocitiesExpanded(da, args.config, args.log_f)
 
     data[time_index + 1] = af.sum(args.E_x**2)
 
-    f = af.exp(args.log_f)
-    f = af.reorder(f, 0, 2, 1, 3)[:, :, 0, 0]
-    f = af.moddims(f, 134, 9, 128)
-    f = np.array(af.reorder(f, 0, 2, 1)[:, :, 0])
+    if(time_index%100==0):
+      f = np.array(af.exp(args.log_f))
+      f = f.reshape([9, 134, 1, 128, 1])
+      f = np.swapaxes(f, 1, 0)
+      f = np.swapaxes(f, 3, 1)[:, :, 0, 0, 0]
 
-    pl.contourf(f, 100)
-    pl.colorbar()
-    pl.xlabel(r'$x$')
-    pl.ylabel(r'$v$')
-    pl.title('Time =' + str(t0))
-    pl.savefig('images/' + '%04d'%time_index + '.png')
+      pl.contourf(v, x, np.swapaxes(f[3:-3, :], 0, 1), 100)
+      pl.colorbar()
+      pl.xlabel(r'$v$')
+      pl.ylabel(r'$x$')
+      pl.title('Time =' + str(t0))
+      pl.savefig('images/' + '%04d'%(time_index/100) + '.png')
+      pl.clf()   
     
-  # Convert to positionsExpanded:
-    args.log_f = non_linear_solver.convert.to_positionsExpanded(da, args.config, args.log_f)
+    # Convert to positionsExpanded:
 
     print(af.max(args.log_f))
     print(af.min(args.log_f))
