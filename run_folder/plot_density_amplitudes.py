@@ -72,7 +72,7 @@ x, v = np.meshgrid(x, v)
 # f_ck1 = np.swapaxes(f_ck1, 0, 3)
 
 pl.xlabel('Time')
-pl.ylabel(r'$MAX(\delta \rho(x))$')
+pl.ylabel('Electrical Energy($SUM(|E|^2)$)')
 pl.legend()
 
 # # f_test = np.zeros_like(f_ck[:, :, 0, 0, 0])

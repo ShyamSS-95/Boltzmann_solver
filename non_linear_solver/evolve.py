@@ -189,7 +189,7 @@ def time_integration(da, da_fields, args, time_array):
   args.log_f = non_linear_solver.convert.to_velocitiesExpanded(da, args.config, args.log_f)
 
   # Storing the value of density amplitude at t = 0
-  data[0] = af.max(non_linear_solver.compute_moments.calculate_density(args))
+  data[0] = af.sum(args.E_x**2)
 
   # Convert to positionsExpanded:
   args.log_f = non_linear_solver.convert.to_positionsExpanded(da, args.config, args.log_f)
@@ -203,31 +203,31 @@ def time_integration(da, da_fields, args, time_array):
     dt = time_array[1] - time_array[0]
 
     # Advection in position space:
-    args.log_f = f_interp_2d(da, args, 0.25*dt)
+    args.log_f = f_interp_2d(da, args, 0.5*dt)
     args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Collision-Step:
     # args.log_f = collision_step_BGK(da, args, 0.5*dt)
     # args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Advection in position space:
-    args.log_f = f_interp_2d(da, args, 0.25*dt)
-    args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
+    # args.log_f = f_interp_2d(da, args, 0.25*dt)
+    # args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Fields Step(Advection in velocity space):
     args       = fields_step(da_fields, args, local_field, glob_field, dt)
     args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Advection in position space:
-    args.log_f = f_interp_2d(da, args, 0.25*dt)
+    args.log_f = f_interp_2d(da, args, 0.5*dt)
     args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Collision-Step:
     # args.log_f = collision_step_BGK(da, args, 0.5*dt)
     # args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Advection in position space:
-    args.log_f = f_interp_2d(da, args, 0.25*dt)
-    args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
+    # args.log_f = f_interp_2d(da, args, 0.25*dt)
+    # args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     
     # Convert to velocitiesExpanded:
     args.log_f = non_linear_solver.convert.to_velocitiesExpanded(da, args.config, args.log_f)
 
-    data[time_index + 1] = af.max(non_linear_solver.compute_moments.calculate_density(args))
+    data[time_index + 1] = af.sum(args.E_x**2)
 
     # Convert to positionsExpanded:
     args.log_f = non_linear_solver.convert.to_positionsExpanded(da, args.config, args.log_f)
