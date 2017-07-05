@@ -58,16 +58,16 @@ def f_interp_vel_3d(args, F_x, F_y, F_z, dt):
   
   # args.vel_x,y,z are already in velocitiesExpanded form
   vel_x = args.vel_x
-  vel_y = args.vel_y
-  vel_z = args.vel_z
+  # vel_y = args.vel_y
+  # vel_z = args.vel_z
   
   # F_x,y,z need to be passed in velocitiesExpanded form
   vel_x_new = vel_x - dt * F_x
-  vel_y_new = vel_y - dt * F_y
-  vel_z_new = vel_z - dt * F_z
+  # vel_y_new = vel_y - dt * F_y
+  # vel_z_new = vel_z - dt * F_z
 
   # Transforming vel_interpolant to go from [0, N_vel - 1]:
-  # vel_x_interpolant = (vel_x_new - af.sum(vel_x[0, 0, 0, 0]))/config.dv_x
+  vel_x_interpolant = (vel_x_new - af.sum(vel_x[0, 0, 0, 0]))/config.dv_x
   # vel_y_interpolant = (vel_y_new - af.sum(vel_y[0, 0, 0, 0]))/config.dv_y
   # vel_z_interpolant = (vel_z_new - af.sum(vel_z[0, 0, 0, 0]))/config.dv_z
 
@@ -78,11 +78,11 @@ def f_interp_vel_3d(args, F_x, F_y, F_z, dt):
 
   # Reordering from f(Ny*Nx, vel_y, vel_x, vel_z)     --> f(vel_y, Ny*Nx, vel_x, vel_z)
   # Reordering from vel_y(Ny*Nx, vel_y, vel_x, vel_z) --> vel_y(vel_y, Ny*Nx, vel_x, vel_z)
-  # args.log_f = af.approx1(af.reorder(args.log_f),\
-  #                         af.reorder(vel_y_interpolant),\
-  #                         af.INTERP.CUBIC_SPLINE,\
-  #                         off_grid = -46
-  #                        )
+  args.log_f = af.approx1(af.reorder(args.log_f, 2, 3, 0, 1),\
+                          af.reorder(vel_x_interpolant,2, 3, 0, 1),\
+                          af.INTERP.CUBIC_SPLINE,\
+                          off_grid = -46
+                         )
 
   # Reordering from f(vel_y, Ny*Nx, vel_x, vel_z)     --> f(vel_x, vel_z, Ny*Nx, vel_y)
   # Reordering from vel_x(Ny*Nx, vel_y, vel_x, vel_z) --> vel_x(vel_x, vel_z, Ny*Nx, vel_y)
@@ -98,17 +98,17 @@ def f_interp_vel_3d(args, F_x, F_y, F_z, dt):
   # Reordering from f(vel_x, vel_z, Ny*Nx, vel_y) --> f(Ny*Nx, vel_y, vel_x, vel_z)
   # args.log_f = af.reorder(args.log_f, 2, 3, 0, 1)
 
-  f   = args.log_f
-  k_v = af.to_array(fftfreq(f.shape[2], config.dv_x))
-  k_v = af.Array.as_type(k_v, af.Dtype.c64)
+  # f   = args.log_f
+  # k_v = af.to_array(fftfreq(f.shape[2], config.dv_x))
+  # k_v = af.Array.as_type(k_v, af.Dtype.c64)
 
-  f_hat = af.fft(af.reorder(f, 2, 3, 1, 0))
-  k_v   = af.tile(k_v, 1, f_hat.shape[1], f_hat.shape[2], f_hat.shape[3])
-  force = af.reorder(F_x * config.dt, 2, 3, 1, 0)
-  f_hat = f_hat*af.exp(-2*np.pi*1j*force*k_v)
+  # f_hat = af.fft(af.reorder(f, 2, 3, 1, 0))
+  # k_v   = af.tile(k_v, 1, f_hat.shape[1], f_hat.shape[2], f_hat.shape[3])
+  # force = af.reorder(F_x * config.dt, 2, 3, 1, 0)
+  # f_hat = f_hat*af.exp(-2*np.pi*1j*force*k_v)
   
-  args.log_f = af.real(af.ifft(f_hat))
-  args.log_f = af.reorder(args.log_f, 2, 3, 1, 0)
+  # args.log_f = af.real(af.ifft(f_hat))
+  args.log_f = af.reorder(args.log_f, 2, 3, 0, 1)
 
   af.eval(args.log_f)
   return(args.log_f)
