@@ -55,7 +55,7 @@ def RK4_step(config, dY_dt, Y0, dt):
   k1 = dY_dt(config, Y0)
   k2 = dY_dt(config, Y0 + 0.5*k1*dt)
   k3 = dY_dt(config, Y0 + 0.5*k2*dt)
-  k4 = dY_dt(config, Y0 + 0.5*k3*dt)
+  k4 = dY_dt(config, Y0 + k3*dt)
   
   Y_new = Y0 + ((k1+2*k2+2*k3+k4)/6)*dt
 

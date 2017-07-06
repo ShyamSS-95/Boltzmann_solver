@@ -188,7 +188,7 @@ def time_integration(config, delta_f_hat_initial, time_array):
     
     dt = time_array[1] - time_array[0]
 
-    Y                            = linear_solver.timestepper.RK6_step(config, dY_dt, Y, dt)
+    Y                            = linear_solver.timestepper.RK4_step(config, dY_dt, Y, dt)
     density_data[time_index + 1] = np.abs(linear_solver.compute_moments.delta_rho_hat(config, Y[0]))
 
   return(density_data, Y[0])

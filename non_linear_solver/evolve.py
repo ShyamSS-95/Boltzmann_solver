@@ -206,44 +206,44 @@ def time_integration(da, da_fields, args, time_array):
     dt = time_array[1] - time_array[0]
 
     # Advection in position space:
-    args.log_f = f_interp_2d(da, args, 0.5*dt)
+    args.log_f = f_interp_2d(da, args, 0.25*dt)
     args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Collision-Step:
-    # args.log_f = collision_step_BGK(da, args, 0.5*dt)
-    # args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
+    args.log_f = collision_step_BGK(da, args, 0.5*dt)
+    args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Advection in position space:
-    # args.log_f = f_interp_2d(da, args, 0.25*dt)
-    # args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
+    args.log_f = f_interp_2d(da, args, 0.25*dt)
+    args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Fields Step(Advection in velocity space):
     args       = fields_step(da_fields, args, local_field, glob_field, dt)
     args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Advection in position space:
-    args.log_f = f_interp_2d(da, args, 0.5*dt)
+    args.log_f = f_interp_2d(da, args, 0.25*dt)
     args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Collision-Step:
-    # args.log_f = collision_step_BGK(da, args, 0.5*dt)
-    # args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
+    args.log_f = collision_step_BGK(da, args, 0.5*dt)
+    args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Advection in position space:
-    # args.log_f = f_interp_2d(da, args, 0.25*dt)
-    # args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
+    args.log_f = f_interp_2d(da, args, 0.25*dt)
+    args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     
     # Convert to velocitiesExpanded:
 
     data[time_index + 1] = af.sum(args.E_x**2)
 
-    if(time_index%100==0):
-      f = np.array(af.exp(args.log_f))
-      f = f.reshape([9, 134, 1, 128, 1])
-      f = np.swapaxes(f, 1, 0)
-      f = np.swapaxes(f, 3, 1)[:, :, 0, 0, 0]
+    # if(time_index%100==0):
+    #   f = np.array(af.exp(args.log_f))
+    #   f = f.reshape([9, 134, 1, 128, 1])
+    #   f = np.swapaxes(f, 1, 0)
+    #   f = np.swapaxes(f, 3, 1)[:, :, 0, 0, 0]
 
-      pl.contourf(v, x, np.swapaxes(f[3:-3, :], 0, 1), 100)
-      pl.colorbar()
-      pl.xlabel(r'$v$')
-      pl.ylabel(r'$x$')
-      pl.title('Time =' + str(t0))
-      pl.savefig('images/' + '%04d'%(time_index/100) + '.png')
-      pl.clf()   
+    #   pl.contourf(v, x, np.swapaxes(f[3:-3, :], 0, 1), 100)
+    #   pl.colorbar()
+    #   pl.xlabel(r'$v$')
+    #   pl.ylabel(r'$x$')
+    #   pl.title('Time =' + str(t0))
+    #   pl.savefig('images/' + '%04d'%(time_index/100) + '.png')
+    #   pl.clf()   
     
     # Convert to positionsExpanded:
 
