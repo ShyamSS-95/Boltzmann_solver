@@ -165,11 +165,12 @@ def time_integration(config, delta_f_hat_initial, time_array):
   # Similarly, we add the arrays of dfdv_x, dfdv_y and dfdv_z:
   config.dfdv_x_background, config.dfdv_y_background, config.dfdv_z_background = \
     linear_solver.initialize.df_dv_background(config)
+  
+  delta_f_hat   = delta_f_hat_initial
 
   density_data    = np.zeros(time_array.size)
-  density_data[0] = np.abs(linear_solver.compute_moments.delta_rho_hat(config, delta_f_hat_initial))
+  density_data[0] = np.abs(compute_electrostatic_fields(config, delta_f_hat)[1]**2)
 
-  delta_f_hat   = delta_f_hat_initial
   delta_E_x_hat = compute_electrostatic_fields(config, delta_f_hat)[0]
   delta_E_y_hat = compute_electrostatic_fields(config, delta_f_hat)[1]
   delta_E_z_hat = compute_electrostatic_fields(config, delta_f_hat)[2]
@@ -189,6 +190,6 @@ def time_integration(config, delta_f_hat_initial, time_array):
     dt = time_array[1] - time_array[0]
 
     Y                            = linear_solver.timestepper.RK4_step(config, dY_dt, Y, dt)
-    density_data[time_index + 1] = np.abs(linear_solver.compute_moments.delta_rho_hat(config, Y[0]))
+    density_data[time_index + 1] = np.abs(Y[1]**2)
 
   return(density_data, Y[0])

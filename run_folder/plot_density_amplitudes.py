@@ -52,9 +52,9 @@ h5f.close()
 # f_ck1 = h5f['distribution_function'][:]
 # h5f.close()
 
-h5f  = h5py.File('lt_distribution_function.h5', 'r')
-f_lt = h5f['distribution_function'][:]
-h5f.close()
+# h5f  = h5py.File('lt_distribution_function.h5', 'r')
+# f_lt = h5f['distribution_function'][:]
+# h5f.close()
 
 # f_ck = np.swapaxes(f_ck, 0, 1).reshape(f_lt.shape[0], f_lt.shape[1], f_lt.shape[4], f_lt.shape[3], f_lt.shape[2])
 # f_ck = np.swapaxes(f_ck, 4, 2)
@@ -62,7 +62,7 @@ h5f.close()
 # f_ck1 = np.swapaxes(f_ck1, 4, 2)
 
 pl.semilogy(time_ck, amplitude_ck, label = 'CK')
-# pl.plot(time_lt, amplitude_lt, '--', color = 'black', label = 'LT')
+pl.semilogy(time_lt, 500*amplitude_lt, '--', color = 'black', label = 'LT')
 
 x = (0.5 + np.arange(32))*(1/32)
 v = -9 + (0.5 + np.arange(32))*(18/32)

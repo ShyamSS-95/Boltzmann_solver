@@ -46,9 +46,15 @@ def maxwell_boltzmann(config, vel_x, vel_y, vel_z):
             np.exp(-m*(vel_y - v_y_bulk)**2/(2*k*T))
 
   elif(config.mode == '1V'):
-    f = rho * np.sqrt(m/(2*np.pi*k*T)) * \
-          np.exp(-m*(vel_x - v_x_bulk)**2/(2*k*T))
+    # f = rho * np.sqrt(m/(2*np.pi*k*T)) * \
+    #       np.exp(-m*(vel_x - v_x_bulk)**2/(2*k*T))
 
+    n_p = 0.9/(2*np.pi)
+    n_b = 0.2/(2*np.pi)
+
+    f = rho *\
+        (n_p * np.exp(-0.5*vel_x**2) + n_b *  np.exp(-0.5*((vel_x - 4.5)/0.5)**2))
+    
   return(f)
 
 def init_velocities(config):
