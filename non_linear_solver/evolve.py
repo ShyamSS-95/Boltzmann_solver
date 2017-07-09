@@ -209,8 +209,8 @@ def time_integration(da, da_fields, args, time_array):
     args.log_f = f_interp_2d(da, args, 0.25*dt)
     args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Collision-Step:
-    # args.log_f = collision_step_BGK(da, args, 0.5*dt)
-    # args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
+    args.log_f = collision_step_BGK(da, args, 0.5*dt)
+    args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Advection in position space:
     args.log_f = f_interp_2d(da, args, 0.25*dt)
     args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
@@ -221,8 +221,8 @@ def time_integration(da, da_fields, args, time_array):
     args.log_f = f_interp_2d(da, args, 0.25*dt)
     args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Collision-Step:
-    # args.log_f = collision_step_BGK(da, args, 0.5*dt)
-    # args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
+    args.log_f = collision_step_BGK(da, args, 0.5*dt)
+    args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)
     # Advection in position space:
     args.log_f = f_interp_2d(da, args, 0.25*dt)
     args.log_f = non_linear_solver.communicate.communicate_distribution_function(da, args, local, glob)

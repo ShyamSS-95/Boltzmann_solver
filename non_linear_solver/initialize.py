@@ -314,6 +314,8 @@ def log_f_initial(da, args):
                               (f_background.shape[0])
   args.log_f                = af.log(f/args.config.normalization)
   args.f                    = (f/args.config.normalization)
+
+  print(config.normalization)
   
   # Modifying the dimensions again:
   # Converting from velocitiesExpanded form to positionsExpanded form:

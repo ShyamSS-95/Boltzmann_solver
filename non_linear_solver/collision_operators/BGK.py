@@ -85,9 +85,11 @@ def collision_step_BGK(da, args, dt):
   args.log_f = non_linear_solver.convert.to_velocitiesExpanded(da, args.config, args.log_f)
 
   # Performing the step of df/dt = C[f] = -(f - f_MB)/tau:
+  log_f_initial      = args.log_f.copy()
   f0                 = log_f_MB(da, args)
-  log_f_intermediate = args.log_f + (dt/2)*(af.exp(f0 - args.log_f) - 1)/tau
-  args.log_f         = args.log_f + (dt)  *(af.exp(f0 - log_f_intermediate) - 1)/tau
+  args.log_f         = log_f_initial + (dt/2)*(af.exp(f0 - args.log_f) - 1)/tau
+  f0                 = log_f_MB(da, args)
+  args.log_f         = log_f_initial + (dt)  *(af.exp(f0 - args.log_f) - 1)/tau
 
   # Converting from velocitiesExpanded form to positionsExpanded form:
   args.log_f = non_linear_solver.convert.to_positionsExpanded(da, args.config, args.log_f)
