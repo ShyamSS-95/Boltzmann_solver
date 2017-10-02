@@ -22,6 +22,36 @@ import bolt.src.nonrelativistic_boltzmann.collision_operator \
 
 import bolt.src.nonrelativistic_boltzmann.moment_defs as moment_defs
 
+# Optimized plot parameters to make beautiful plots:
+pl.rcParams['figure.figsize']  = 12, 7.5
+pl.rcParams['figure.dpi']      = 300
+pl.rcParams['image.cmap']      = 'jet'
+pl.rcParams['lines.linewidth'] = 1.5
+pl.rcParams['font.family']     = 'serif'
+pl.rcParams['font.weight']     = 'bold'
+pl.rcParams['font.size']       = 20
+pl.rcParams['font.sans-serif'] = 'serif'
+pl.rcParams['text.usetex']     = True
+pl.rcParams['axes.linewidth']  = 1.5
+pl.rcParams['axes.titlesize']  = 'medium'
+pl.rcParams['axes.labelsize']  = 'medium'
+
+pl.rcParams['xtick.major.size'] = 8
+pl.rcParams['xtick.minor.size'] = 4
+pl.rcParams['xtick.major.pad']  = 8
+pl.rcParams['xtick.minor.pad']  = 8
+pl.rcParams['xtick.color']      = 'k'
+pl.rcParams['xtick.labelsize']  = 'medium'
+pl.rcParams['xtick.direction']  = 'in'
+
+pl.rcParams['ytick.major.size'] = 8
+pl.rcParams['ytick.minor.size'] = 4
+pl.rcParams['ytick.major.pad']  = 8
+pl.rcParams['ytick.minor.pad']  = 8
+pl.rcParams['ytick.color']      = 'k'
+pl.rcParams['ytick.labelsize']  = 'medium'
+pl.rcParams['ytick.direction']  = 'in'
+
 # Defining the physical system to be solved:
 system = physical_system(domain,
                          boundary_conditions,
@@ -37,31 +67,43 @@ ls  = linear_solver(system)
 
 # Time parameters:
 dt      = 0.001
-t_final = 0.5
+t_final = 3.999
 
 time_array = np.arange(0, t_final + dt, dt)
 
 # Initializing Array used in storing the data:
-rho_data     = np.zeros_like(time_array)
-rho_hat_data = np.zeros_like(time_array)
+rho_hat_data = af.constant(0, time_array.size, ls.N_q1, dtype = af.Dtype.c64)
+
+k        = 2 * np.pi * np.fft.fftfreq(ls.N_q1, ls.dq1)[:int(ls.N_q1/2)]
+omega    = 2 * np.pi * np.fft.fftfreq(time_array.size, dt)[:int(time_array.size/2)]
+k, omega = np.meshgrid(k, omega)
 
 for time_index, t0 in enumerate(time_array):
     print('Computing For Time =', t0)
 
     n = ls.compute_moments('density')
-    rho_data[time_index]     = af.max(n)
-    rho_hat_data[time_index] = af.max(af.abs(af.fft(n-1)))
+    rho_hat_data[time_index, :] = af.reorder(af.fft(n-1)[:, 0])
     ls.RK2_timestep(dt)
 
-f_hat = abs(np.fft.fft(rho_data - np.min(rho_data)))
-omega = 2 * np.pi * np.fft.fftfreq(time_array.size, dt)
+rho_hat_hat = af.fft(rho_hat_data)
+
+pl.contourf(omega, k, (np.array(rho_hat_hat).real)[:int(time_array.size/2),:int(ls.N_q1/2)] ,100)
+pl.xlabel(r'$\omega$')
+pl.ylabel(r'$k$')
+pl.title(r'$\Re(\hat{\hat{\rho}})$')
+pl.colorbar()
+pl.savefig('plot1.png')
+pl.clf()
+
+pl.contourf(omega, k, (np.array(rho_hat_hat).imag)[:int(time_array.size/2),:int(ls.N_q1/2)] ,100)
+pl.xlabel(r'$\omega$')
+pl.ylabel(r'$k$')
+pl.title(r'$\Im(\hat{\hat{\rho}})$')
+pl.colorbar()
+pl.savefig('plot2.png')
 
 h5f = h5py.File('data.h5', 'w')
-h5f.create_dataset('rho', data = rho_data)
-h5f.create_dataset('rho_hat', data = rho_hat_data)
-h5f.create_dataset('f_hat', data = f_hat)
-h5f.create_dataset('time', data = time_array)
+h5f.create_dataset('rho_hat_hat', data = rho_hat_hat[:int(time_array.size/2),:int(ls.N_q1/2)])
 h5f.create_dataset('omega', data = omega)
+h5f.create_dataset('k', data = k)
 h5f.close()
-
-print('Omega:', omega[int(np.argmax(f_hat[:int(time_array.size/2)]))])
