@@ -66,8 +66,8 @@ system = physical_system(domain,
 ls  = linear_solver(system)
 
 # Time parameters:
-dt      = 0.001
-t_final = 4.999
+dt      = 0.00005
+t_final = 0.99995
 
 time_array = np.arange(0, t_final + dt, dt)
 
@@ -85,6 +85,10 @@ for time_index, t0 in enumerate(time_array):
     n = ls.compute_moments('density')
     rho_hat_data[time_index, :] = af.reorder(af.fft(n-1)[:, 0])
     rho_data[time_index]        = af.max(n)
+    
+    if(af.max(n)>2):
+        raise Exception('Solver Diverging!')
+
     ls.RK2_timestep(dt)
 
 rho_hat_hat = af.fft(rho_hat_data)
@@ -113,6 +117,7 @@ rho_hat_hat = af.fft(rho_hat_data)
 h5f = h5py.File('data.h5', 'w')
 h5f.create_dataset('rho_hat_hat', data = rho_hat_hat[:int(time_array.size/2),:int(ls.N_q1/2)])
 h5f.create_dataset('rho', data = rho_data)
+h5f.create_dataset('time', data = time_array)
 h5f.create_dataset('omega', data = omega)
 h5f.create_dataset('k', data = k)
 h5f.close()

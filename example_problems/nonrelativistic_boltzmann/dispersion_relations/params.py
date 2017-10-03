@@ -32,12 +32,6 @@ p1_bulk_background = 0
 p2_bulk_background = 0
 p3_bulk_background = 0
 
-pert_real = 0.01
-pert_imag = 0
-
-k_q1 = 2 * np.pi
-k_q2 = 0
-
 # Variation of collisional-timescale parameter through phase space:
 def tau(q1, q2, p1, p2, p3):
     return (af.constant(np.inf, q1.shape[0], q2.shape[1], 
