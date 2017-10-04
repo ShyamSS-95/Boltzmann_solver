@@ -93,29 +93,9 @@ for time_index, t0 in enumerate(time_array):
 
 rho_hat_hat = af.fft(rho_hat_data)
 
-# pl.contourf(omega, k, (np.array(rho_hat_hat).real)[:int(time_array.size/2),:int(ls.N_q1/2)] ,100)
-# pl.xlabel(r'$\omega$')
-# pl.ylabel(r'$k$')
-# pl.title(r'$\Re(\hat{\hat{\rho}})$')
-# pl.colorbar()
-# pl.savefig('plot1.png')
-# pl.clf()
-
-# pl.contourf(omega, k, (np.array(rho_hat_hat).imag)[:int(time_array.size/2),:int(ls.N_q1/2)] ,100)
-# pl.xlabel(r'$\omega$')
-# pl.ylabel(r'$k$')
-# pl.title(r'$\Im(\hat{\hat{\rho}})$')
-# pl.colorbar()
-# pl.savefig('plot2.png')
-# pl.clf()
-
-# pl.plot(time_array, rho_data)
-# pl.xlabel(r'$t$')
-# pl.ylabel(r'$\rho$')
-# pl.savefig('plot3.png')
-
 h5f = h5py.File('data.h5', 'w')
 h5f.create_dataset('rho_hat_hat', data = rho_hat_hat[:int(time_array.size/2),:int(ls.N_q1/2)])
+h5f.create_dataset('rho_hat', data = rho_hat_data)
 h5f.create_dataset('rho', data = rho_data)
 h5f.create_dataset('time', data = time_array)
 h5f.create_dataset('omega', data = omega)
