@@ -133,13 +133,11 @@ class fields_solver(object):
         
         if(   self.boundary_conditions.in_q1_left == 'periodic'
            or self.boundary_conditions.in_q1_left == 'shearing-box'
-           or self.boundary_conditions.in_q1_left == 'mirror'
           ):
             petsc_bc_in_q1 = 'periodic'
 
         if(   self.boundary_conditions.in_q2_bottom == 'periodic'
            or self.boundary_conditions.in_q2_bottom == 'shearing-box'
-           or self.boundary_conditions.in_q2_bottom == 'mirror'
           ):
             petsc_bc_in_q2 = 'periodic'
 
@@ -410,6 +408,20 @@ class fields_solver(object):
                                               dtype=af.Dtype.f64
                                              )
 
+        # Field values at n-th timestep on the Yee Grid:
+        self.yee_grid_EM_fields_at_n = af.constant(0, 6, 1, 
+                                                   N_q1_local + 2 * self.N_g,
+                                                   N_q2_local + 2 * self.N_g,
+                                                   dtype=af.Dtype.f64
+                                                  )
+
+        # Field values at (n+1/2)-th timestep on the Yee grid:
+        self.yee_grid_EM_fields_at_n_plus_half = af.constant(0, 6, 1, 
+                                                             N_q1_local + 2 * self.N_g,
+                                                             N_q2_local + 2 * self.N_g,
+                                                             dtype=af.Dtype.f64
+                                                            )
+
         if (self.params.fields_initialize == 'fft'):
             fft_poisson(self, rho_initial)
             communicate.communicate_fields(self)
@@ -441,6 +453,9 @@ class fields_solver(object):
         # At t = 0, we take the value of B_{0} = B{1/2}:
         self.cell_centered_EM_fields_at_n = self.cell_centered_EM_fields
         self.cell_centered_EM_fields_at_n_plus_half = self.cell_centered_EM_fields
+        self.yee_grid_EM_fields_at_n = self.yee_grid_EM_fields
+        self.yee_grid_EM_fields_at_n_plus_half = self.yee_grid_EM_fields
+
         return
 
     def cell_centered_grid_to_yee_grid(self, fields_to_transform = None):
@@ -561,7 +576,12 @@ class fields_solver(object):
         # E_at_n holds (E_x^n , E_y^n, E_z^n)
         # cell_centered_EM_fields[:3] => (E_x^n , E_y^n, E_z^n)
         E_at_n = self.cell_centered_EM_fields[:3]
+        # Getting it for the yee grid:
+        E_yee_at_n = self.yee_grid_EM_fields[:3]
+
         self.cell_centered_EM_fields_at_n[:3] = E_at_n
+        # Doing the same for Yee Grid fields:
+        self.yee_grid_EM_fields_at_n[:3] = self.yee_grid_EM_fields[:3]
  
         # B_at_n_minus_half holds (B_x^{n-1/2} , B_y^{n-1/2}, B_z^{n-1/2})
         # cell_centered_EM_fields_at_n_plus_half[3:] => (B_x^{n-1/2} , B_y^{n-1/2}, B_z^{n-1/2})
@@ -575,10 +595,16 @@ class fields_solver(object):
         # cell_centered_EM_fields_at_n[3:] => (B_x^n , B_y^n, B_z^n)
         B_at_n = 0.5 * (B_at_n_minus_half + B_at_n_plus_half)
         self.cell_centered_EM_fields_at_n[3:] = B_at_n
+        # Doing the same for Yee Grid fields:
+        self.yee_grid_EM_fields_at_n[3:] = 0.5 * (  self.yee_grid_EM_fields_at_n_plus_half[3:] 
+                                                  + self.yee_grid_EM_fields[3:]
+                                                 )
 
         # Now updating cell_centered_EM_fields_at_n_plus_half for this timestep:
         # cell_centered_EM_fields_at_n_plus_half[3:] => (B_x^{n+1/2} , B_y^{n+1/2}, B_z^{n+1/2})
         self.cell_centered_EM_fields_at_n_plus_half[3:] = B_at_n_plus_half
+        # Doing the same for Yee Grid fields:
+        self.yee_grid_EM_fields_at_n_plus_half[3:] = self.yee_grid_EM_fields[3:]
 
         # Evolving:
         # cell_centered_EM_fields[:3] => (E_x^n ,     E_y^n,     E_z^n) --> 
@@ -594,12 +620,15 @@ class fields_solver(object):
         # cell_centered_EM_fields_at_n_plus_half[:3] => (E_x^{n+1/2}, E_y^{n+1/2}, E_z^{n+1/2})
         E_at_n_plus_half = 0.5 * (E_at_n + E_at_n_plus_one)
         self.cell_centered_EM_fields_at_n_plus_half[:3] = E_at_n_plus_half
+        self.yee_grid_EM_fields_at_n_plus_half[:3] = 0.5 * (  E_yee_at_n
+                                                            + self.yee_grid_EM_fields[:3]
+                                                           )
 
         # Update time elapsed:
         self.time_elapsed += dt
         return
 
-    def get_fields(self):
+    def get_fields(self, fields_location):
         """
         Returns the fields value as held by the
         solver in it's current state.
@@ -615,25 +644,138 @@ class fields_solver(object):
             B3 = self.cell_centered_EM_fields[5]
 
         else:
-            if(self.at_n == True):
 
-                E1 = self.cell_centered_EM_fields_at_n[0]
-                E2 = self.cell_centered_EM_fields_at_n[1]
-                E3 = self.cell_centered_EM_fields_at_n[2]
+            if(fields_location == 'center'):
 
-                B1 = self.cell_centered_EM_fields_at_n[3]
-                B2 = self.cell_centered_EM_fields_at_n[4]
-                B3 = self.cell_centered_EM_fields_at_n[5]
+                if(self.at_n == True):
 
-            else:
+                    E1 = self.cell_centered_EM_fields_at_n[0]
+                    E2 = self.cell_centered_EM_fields_at_n[1]
+                    E3 = self.cell_centered_EM_fields_at_n[2]
 
-                E1 = self.cell_centered_EM_fields_at_n_plus_half[0]
-                E2 = self.cell_centered_EM_fields_at_n_plus_half[1]
-                E3 = self.cell_centered_EM_fields_at_n_plus_half[2]
+                    B1 = self.cell_centered_EM_fields_at_n[3]
+                    B2 = self.cell_centered_EM_fields_at_n[4]
+                    B3 = self.cell_centered_EM_fields_at_n[5]
 
-                B1 = self.cell_centered_EM_fields_at_n_plus_half[3]
-                B2 = self.cell_centered_EM_fields_at_n_plus_half[4]
-                B3 = self.cell_centered_EM_fields_at_n_plus_half[5]
+                else:
+
+                    E1 = self.cell_centered_EM_fields_at_n_plus_half[0]
+                    E2 = self.cell_centered_EM_fields_at_n_plus_half[1]
+                    E3 = self.cell_centered_EM_fields_at_n_plus_half[2]
+
+                    B1 = self.cell_centered_EM_fields_at_n_plus_half[3]
+                    B2 = self.cell_centered_EM_fields_at_n_plus_half[4]
+                    B3 = self.cell_centered_EM_fields_at_n_plus_half[5]
+
+            # Gets fields at the center of the left face: i.e (i, j + 1/2)
+            elif(fields_location == 'left_center'):
+
+                if(self.at_n == True):
+
+                    E1 = self.yee_grid_EM_fields_at_n[0] # (i, j + 1/2)
+                    
+                    E2 = 0.25 * (  self.yee_grid_EM_fields_at_n[1] # (i + 1/2, j)
+                                 + af.shift(self.yee_grid_EM_fields_at_n[1], 0, 0, 1, 0)  # (i - 1/2, j)
+                                 + af.shift(self.yee_grid_EM_fields_at_n[1], 0, 0, 1, -1) # (i - 1/2, j+1)
+                                 + af.shift(self.yee_grid_EM_fields_at_n[1], 0, 0, 0, -1) # (i + 1/2, j+1)
+                                )
+
+                    E3 = 0.5 * (  self.yee_grid_EM_fields_at_n[2] # (i + 1/2, j + 1/2) 
+                                + af.shift(self.yee_grid_EM_fields_at_n[2], 0, 0, 1) # (i - 1/2, j + 1/2)
+                               )
+
+                    B1 = 0.25 * (  self.yee_grid_EM_fields_at_n[3] # (i + 1/2, j)
+                                 + af.shift(self.yee_grid_EM_fields_at_n[3], 0, 0, 1, 0)  # (i - 1/2, j)
+                                 + af.shift(self.yee_grid_EM_fields_at_n[3], 0, 0, 1, -1) # (i - 1/2, j+1)
+                                 + af.shift(self.yee_grid_EM_fields_at_n[3], 0, 0, 0, -1) # (i + 1/2, j+1)
+                                )
+
+                    B2 = self.yee_grid_EM_fields_at_n[4] # (i, j + 1/2)
+
+                    B3 = 0.5 * (  self.yee_grid_EM_fields_at_n[5] # (i, j) 
+                                + af.shift(self.yee_grid_EM_fields_at_n[5], 0, 0, 0, -1) # (i, j + 1)
+                               )
+
+                else:
+
+                    E1 = self.yee_grid_EM_fields_at_n_plus_half[0] # (i, j + 1/2)
+                    
+                    E2 = 0.25 * (  self.yee_grid_EM_fields_at_n_plus_half[1] # (i + 1/2, j)
+                                 + af.shift(self.yee_grid_EM_fields_at_n_plus_half[1], 0, 0, 1, 0)  # (i - 1/2, j)
+                                 + af.shift(self.yee_grid_EM_fields_at_n_plus_half[1], 0, 0, 1, -1) # (i - 1/2, j+1)
+                                 + af.shift(self.yee_grid_EM_fields_at_n_plus_half[1], 0, 0, 0, -1) # (i + 1/2, j+1)
+                                )
+
+                    E3 = 0.5 * (  self.yee_grid_EM_fields_at_n_plus_half[2] # (i + 1/2, j + 1/2) 
+                                + af.shift(self.yee_grid_EM_fields_at_n_plus_half[2], 0, 0, 1) # (i - 1/2, j + 1/2)
+                               )
+
+                    B1 = 0.25 * (  self.yee_grid_EM_fields_at_n_plus_half[3] # (i + 1/2, j)
+                                 + af.shift(self.yee_grid_EM_fields_at_n_plus_half[3], 0, 0, 1, 0)  # (i - 1/2, j)
+                                 + af.shift(self.yee_grid_EM_fields_at_n_plus_half[3], 0, 0, 1, -1) # (i - 1/2, j+1)
+                                 + af.shift(self.yee_grid_EM_fields_at_n_plus_half[3], 0, 0, 0, -1) # (i + 1/2, j+1)
+                                )
+
+                    B2 = self.yee_grid_EM_fields_at_n_plus_half[4] # (i, j + 1/2)
+
+                    B3 = 0.5 * (  self.yee_grid_EM_fields_at_n_plus_half[5] # (i, j) 
+                                + af.shift(self.yee_grid_EM_fields_at_n_plus_half[5], 0, 0, 0, -1) # (i, j + 1)
+                               )
+
+            # Gets fields at the center of the bottom face: i.e (i+1/2, j)
+            elif(fields_location == 'center_bottom'):
+
+                if(self.at_n == True):
+
+                    E1 = 0.25 * (  self.yee_grid_EM_fields_at_n[0] # (i, j+1/2)
+                                 + af.shift(self.yee_grid_EM_fields_at_n[0], 0, 0,  0, 1)  # (i, j-1/2)
+                                 + af.shift(self.yee_grid_EM_fields_at_n[0], 0, 0, -1, 0) # (i + 1, j+1/2)
+                                 + af.shift(self.yee_grid_EM_fields_at_n[0], 0, 0, -1, -1) # (i + 1, j-1/2)
+                                )
+
+                    E2 = self.yee_grid_EM_fields_at_n[1] # (i + 1/2, j)
+                    
+                    E3 = 0.5 * (  self.yee_grid_EM_fields_at_n[2] # (i + 1/2, j + 1/2) 
+                                + af.shift(self.yee_grid_EM_fields_at_n[2], 0, 0, 0, 1) # (i + 1/2, j - 1/2)
+                               )
+
+                    B1 = self.yee_grid_EM_fields_at_n[3] # (i + 1/2, j)
+                    
+                    B2 = 0.25 * (  self.yee_grid_EM_fields_at_n[4] # (i, j+1/2)
+                                 + af.shift(self.yee_grid_EM_fields_at_n[4], 0, 0,  0, 1)  # (i, j-1/2)
+                                 + af.shift(self.yee_grid_EM_fields_at_n[4], 0, 0, -1, 0) # (i + 1, j+1/2)
+                                 + af.shift(self.yee_grid_EM_fields_at_n[4], 0, 0, -1, -1) # (i + 1, j-1/2)
+                                )
+                    
+                    B3 = 0.5 * (  self.yee_grid_EM_fields_at_n[5] #(i, j)
+                                + af.shift(self.yee_grid_EM_fields_at_n[5], 0, 0, -1, 0) # (i + 1, j)
+                               )
+
+                else:
+
+                    E1 = 0.25 * (  self.cell_centered_EM_fields_at_n_plus_half[0] # (i, j+1/2)
+                                 + af.shift(self.cell_centered_EM_fields_at_n_plus_half[0], 0, 0,  0, 1)  # (i, j-1/2)
+                                 + af.shift(self.cell_centered_EM_fields_at_n_plus_half[0], 0, 0, -1, 0) # (i + 1, j+1/2)
+                                 + af.shift(self.cell_centered_EM_fields_at_n_plus_half[0], 0, 0, -1, -1) # (i + 1, j-1/2)
+                                )
+
+                    E2 = self.cell_centered_EM_fields_at_n_plus_half[1] # (i + 1/2, j)
+                    
+                    E3 = 0.5 * (  self.cell_centered_EM_fields_at_n_plus_half[2] # (i + 1/2, j + 1/2) 
+                                + af.shift(self.cell_centered_EM_fields_at_n_plus_half[2], 0, 0, 0, 1) # (i + 1/2, j - 1/2)
+                               )
+
+                    B1 = self.cell_centered_EM_fields_at_n_plus_half[3] # (i + 1/2, j)
+                    
+                    B2 = 0.25 * (  self.cell_centered_EM_fields_at_n_plus_half[4] # (i, j+1/2)
+                                 + af.shift(self.cell_centered_EM_fields_at_n_plus_half[4], 0, 0,  0, 1)  # (i, j-1/2)
+                                 + af.shift(self.cell_centered_EM_fields_at_n_plus_half[4], 0, 0, -1, 0) # (i + 1, j+1/2)
+                                 + af.shift(self.cell_centered_EM_fields_at_n_plus_half[4], 0, 0, -1, -1) # (i + 1, j-1/2)
+                                )
+                    
+                    B3 = 0.5 * (  self.cell_centered_EM_fields_at_n_plus_half[5] #(i, j)
+                                + af.shift(self.cell_centered_EM_fields_at_n_plus_half[5], 0, 0, -1, 0) # (i + 1, j)
+                               )
 
         if(self.params.solver_method_in_p == 'FVM'):
             # Alternating upon each call for FVM:

@@ -95,7 +95,6 @@ def communicate_fields(self, on_fdtd_grid = False):
 
     # Converting back to af.Array
     if(on_fdtd_grid is True):
-
         self.yee_grid_EM_fields = af.moddims(af.to_array(self._local_fields_array),
                                              6, 1, N_q1_local + 2 * N_g,
                                              N_q2_local + 2 * N_g

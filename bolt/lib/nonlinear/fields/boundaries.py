@@ -487,7 +487,7 @@ def apply_mirror_bcs_fields(self, boundary, on_fdtd_grid):
             # initial_magnetic_fields = self.initialize_magnetic_fields(False)
             # self.yee_grid_EM_fields[3, :, -N_g:] = initial_magnetic_fields[0, :, -N_g:] # B1 --> (i + 1/2, j)
             # self.yee_grid_EM_fields[4, :, -N_g:] = initial_magnetic_fields[1, :, -N_g:] # B2 --> (i, j + 1/2)
-            # self.yee_grid_EM_fields[5, :, -N_g:] = initial_magnetic_fields[2, :, -N_g:] # B3 --> (i, j)
+            # self.yee_grid_EM_fields[5, :, -N_g] = initial_magnetic_fields[2, :, -N_g] # B3 --> (i, j)
 
         else:
             self.cell_centered_EM_fields[:, :, -N_g:] = \
@@ -555,7 +555,7 @@ def apply_mirror_bcs_fields(self, boundary, on_fdtd_grid):
             # initial_magnetic_fields = self.initialize_magnetic_fields(False)
             # self.yee_grid_EM_fields[3, :, :, -N_g:] = initial_magnetic_fields[0, :, :, -N_g:] # B1 --> (i + 1/2, j)
             # self.yee_grid_EM_fields[4, :, :, -N_g:] = initial_magnetic_fields[1, :, :, -N_g:] # B2 --> (i, j + 1/2)
-            # self.yee_grid_EM_fields[5, :, :, -N_g:] = initial_magnetic_fields[2, :, :, -N_g:] # B3 --> (i, j)
+            # self.yee_grid_EM_fields[5, :, :, -N_g] = initial_magnetic_fields[2, :, :, -N_g] # B3 --> (i, j)
 
         else:
             self.cell_centered_EM_fields[:, :, :, -N_g:] = \

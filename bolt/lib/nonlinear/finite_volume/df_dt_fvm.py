@@ -76,8 +76,10 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
                                   self.physical_system.params
                                  )[1]
 
-        f_left = riemann_solver(self, f_left_minus_eps, f_left_plus_eps, self._C_q1)
-        f_bot  = riemann_solver(self, f_bot_minus_eps, f_bot_plus_eps, self._C_q2)
+        f_left  = riemann_solver(self, f_left_minus_eps, f_left_plus_eps, self._C_q1)
+        f_right = af.shift(f_left, 0, 0, -1)
+        f_bot   = riemann_solver(self, f_bot_minus_eps, f_bot_plus_eps, self._C_q2)
+        f_top   = af.shift(f_bot, 0, 0, 0, -1)
 
         left_flux = multiply(self._C_q1, f_left)
         bot_flux  = multiply(self._C_q2, f_bot)
@@ -244,66 +246,146 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
                 self.fields_solver.compute_electrostatic_fields(rho)
 
 
-        # Fields solver object is passed to C_p where the get_fields method
-        # is used to get the electromagnetic fields. The fields returned are
-        # located at the center of the cell. The fields returned are in accordance with
-        # the time level of the simulation. i.e:
-        # On the n-th step it returns (E1^{n}, E2^{n}, E3^{n}, B1^{n}, B2^{n}, B3^{n})
-        # On the (n+1/2)-th step it returns (E1^{n+1/2}, E2^{n+1/2}, E3^{n+1/2}, B1^{n+1/2}, B2^{n+1/2}, B3^{n+1/2})
-        self._C_p1 = af.broadcast(self._C_p, self.time_elapsed,
-                                  self.q1_center, self.q2_center,
-                                  self.p1_left, self.p2_left, self.p3_left,
-                                  self.fields_solver, self.physical_system.params
-                                 )[0]
+        if(self.physical_system.params.energy_conserving == False):
+            # Fields solver object is passed to C_p where the get_fields method
+            # is used to get the electromagnetic fields. The fields returned are
+            # located at the center of the cell. The fields returned are in accordance with
+            # the time level of the simulation. i.e:
+            # On the n-th step it returns (E1^{n}, E2^{n}, E3^{n}, B1^{n}, B2^{n}, B3^{n})
+            # On the (n+1/2)-th step it returns (E1^{n+1/2}, E2^{n+1/2}, E3^{n+1/2}, B1^{n+1/2}, B2^{n+1/2}, B3^{n+1/2})
+            self._C_p1 = af.broadcast(self._C_p, self.time_elapsed,
+                                      self.q1_center, self.q2_center,
+                                      self.p1_left, self.p2_left, self.p3_left,
+                                      self.fields_solver, self.physical_system.params
+                                     )[0]
 
-        self._C_p2 = af.broadcast(self._C_p, self.time_elapsed,
-                                  self.q1_center, self.q2_center,
-                                  self.p1_bottom, self.p2_bottom, self.p3_bottom,
-                                  self.fields_solver, self.physical_system.params
-                                 )[1]
+            self._C_p2 = af.broadcast(self._C_p, self.time_elapsed,
+                                      self.q1_center, self.q2_center,
+                                      self.p1_bottom, self.p2_bottom, self.p3_bottom,
+                                      self.fields_solver, self.physical_system.params
+                                     )[1]
 
-        self._C_p3 = af.broadcast(self._C_p, self.time_elapsed,
-                                  self.q1_center, self.q2_center,
-                                  self.p1_back, self.p2_back, self.p3_back,
-                                  self.fields_solver, self.physical_system.params
-                                 )[2]
+            self._C_p3 = af.broadcast(self._C_p, self.time_elapsed,
+                                      self.q1_center, self.q2_center,
+                                      self.p1_back, self.p2_back, self.p3_back,
+                                      self.fields_solver, self.physical_system.params
+                                     )[2]
 
-        self._C_p1 = self._convert_to_p_expanded(self._C_p1)
-        self._C_p2 = self._convert_to_p_expanded(self._C_p2)
-        self._C_p3 = self._convert_to_p_expanded(self._C_p3)
-        f          = self._convert_to_p_expanded(f)
+            self._C_p1 = self._convert_to_p_expanded(self._C_p1)
+            self._C_p2 = self._convert_to_p_expanded(self._C_p2)
+            self._C_p3 = self._convert_to_p_expanded(self._C_p3)
+            f          = self._convert_to_p_expanded(f)
+            
+            # Variation of p1 is along axis 0:
+            f_left_plus_eps, f_right_minus_eps = reconstruct(self, f, 0, reconstruction_in_p)
+            # Variation of p2 is along axis 1:
+            f_bot_plus_eps, f_top_minus_eps    = reconstruct(self, f, 1, reconstruction_in_p)
+            # Variation of p3 is along axis 2:
+            f_back_plus_eps, f_front_minus_eps = reconstruct(self, f, 2, reconstruction_in_p)
+
+            # f_left_minus_eps of i-th cell is f_right_minus_eps of the (i-1)th cell
+            f_left_minus_eps = af.shift(f_right_minus_eps, 1)
+            # Extending the same to bot:
+            f_bot_minus_eps  = af.shift(f_top_minus_eps, 0, 1)
+            # Extending the same to back:
+            f_back_minus_eps = af.shift(f_front_minus_eps, 0, 0, 1)
+
+            f_left_p1 = riemann_solver(self, f_left_minus_eps, f_left_plus_eps, self._C_p1)
+            f_bot_p2  = riemann_solver(self, f_bot_minus_eps, f_bot_plus_eps, self._C_p2)
+            f_back_p3 = riemann_solver(self, f_back_minus_eps, f_back_plus_eps, self._C_p3)
+            
+            left_flux_p1 = multiply(self._C_p1, f_left_p1)
+            bot_flux_p2  = multiply(self._C_p2, f_bot_p2)
+            back_flux_p3 = multiply(self._C_p3, f_back_p3)
+
+        else:
+
+            self._C_p1_left = af.broadcast(self._C_p, self.time_elapsed,
+                                           self.q1_center, self.q2_center,
+                                           self.p1_left, self.p2_left, self.p3_left,
+                                           self.fields_solver, self.physical_system.params, 'center_bottom'
+                                          )[0]
+
+            self._C_p2_left = af.broadcast(self._C_p, self.time_elapsed,
+                                           self.q1_center, self.q2_center,
+                                           self.p1_bottom, self.p2_bottom, self.p3_bottom,
+                                           self.fields_solver, self.physical_system.params, 'center_bottom'
+                                          )[1]
+
+            self._C_p3_left = af.broadcast(self._C_p, self.time_elapsed,
+                                           self.q1_center, self.q2_center,
+                                           self.p1_back, self.p2_back, self.p3_back,
+                                           self.fields_solver, self.physical_system.params, 'center_bottom'
+                                          )[2]
+
+            self._C_p1_bot = af.broadcast(self._C_p, self.time_elapsed,
+                                          self.q1_center, self.q2_center,
+                                          self.p1_left, self.p2_left, self.p3_left,
+                                          self.fields_solver, self.physical_system.params, 'center_bottom'
+                                         )[0]
+
+            self._C_p2_bot = af.broadcast(self._C_p, self.time_elapsed,
+                                          self.q1_center, self.q2_center,
+                                          self.p1_bottom, self.p2_bottom, self.p3_bottom,
+                                          self.fields_solver, self.physical_system.params, 'center_bottom'
+                                         )[1]
+
+            self._C_p3_bot = af.broadcast(self._C_p, self.time_elapsed,
+                                          self.q1_center, self.q2_center,
+                                          self.p1_back, self.p2_back, self.p3_back,
+                                          self.fields_solver, self.physical_system.params, 'center_bottom'
+                                         )[2]
+
+            self._C_p1_left = self._convert_to_p_expanded(self._C_p1_left)
+            self._C_p2_left = self._convert_to_p_expanded(self._C_p2_left)
+            self._C_p3_left = self._convert_to_p_expanded(self._C_p3_left)
+
+            self._C_p1_bot = self._convert_to_p_expanded(self._C_p1_bot)
+            self._C_p2_bot = self._convert_to_p_expanded(self._C_p2_bot)
+            self._C_p3_bot = self._convert_to_p_expanded(self._C_p3_bot)
+
+            f_left = self._convert_to_p_expanded(f_left)
+            f_bot  = self._convert_to_p_expanded(f_bot)
+
+            # Variation of p1 is along axis 0:
+            fl_left_plus_eps, fl_right_minus_eps = reconstruct(self, f_left, 0, reconstruction_in_p)
+            # Variation of p2 is along axis 1:
+            fl_bot_plus_eps, fl_top_minus_eps    = reconstruct(self, f_left, 1, reconstruction_in_p)
+            # Variation of p3 is along axis 2:
+            fl_back_plus_eps, fl_front_minus_eps = reconstruct(self, f_left, 2, reconstruction_in_p)
+
+            # Variation of p1 is along axis 0:
+            fb_left_plus_eps, fb_right_minus_eps = reconstruct(self, f_bot, 0, reconstruction_in_p)
+            # Variation of p2 is along axis 1:
+            fb_bot_plus_eps, fb_top_minus_eps    = reconstruct(self, f_bot, 1, reconstruction_in_p)
+            # Variation of p3 is along axis 2:
+            fb_back_plus_eps, fb_front_minus_eps = reconstruct(self, f_bot, 2, reconstruction_in_p)
+            
+            # f_left_minus_eps of i-th cell is f_right_minus_eps of the (i-1)th cell
+            fl_left_minus_eps = af.shift(fl_right_minus_eps, 1)
+            # Extending the same to bot:
+            fl_bot_minus_eps  = af.shift(fl_top_minus_eps, 0, 1)
+            # Extending the same to back:
+            fl_back_minus_eps = af.shift(fl_front_minus_eps, 0, 0, 1)
+
+            # f_left_minus_eps of i-th cell is f_right_minus_eps of the (i-1)th cell
+            fb_left_minus_eps = af.shift(fb_right_minus_eps, 1)
+            # Extending the same to bot:
+            fb_bot_minus_eps  = af.shift(fb_top_minus_eps, 0, 1)
+            # Extending the same to back:
+            fb_back_minus_eps = af.shift(fb_front_minus_eps, 0, 0, 1)
+
+            fl_left_p1 = riemann_solver(self, fl_left_minus_eps, fl_left_plus_eps, self._C_p1_left)
+            fl_bot_p2  = riemann_solver(self, fl_bot_minus_eps, fl_bot_plus_eps, self._C_p2_left)
+            fl_back_p3 = riemann_solver(self, fl_back_minus_eps, fl_back_plus_eps, self._C_p3_left)
+
+            fb_left_p1 = riemann_solver(self, fb_left_minus_eps, fb_left_plus_eps, self._C_p1_bot)
+            fb_bot_p2  = riemann_solver(self, fb_bot_minus_eps, fb_bot_plus_eps, self._C_p2_bot)
+            fb_back_p3 = riemann_solver(self, fb_back_minus_eps, fb_back_plus_eps, self._C_p3_bot)
         
-        # Variation of p1 is along axis 0:
-        f_left_plus_eps, f_right_minus_eps = reconstruct(self, f, 0, reconstruction_in_p)
-        # Variation of p2 is along axis 1:
-        f_bot_plus_eps, f_top_minus_eps    = reconstruct(self, f, 1, reconstruction_in_p)
-        # Variation of p3 is along axis 2:
-        f_back_plus_eps, f_front_minus_eps = reconstruct(self, f, 2, reconstruction_in_p)
-
-        # f_left_minus_eps of i-th cell is f_right_minus_eps of the (i-1)th cell
-        f_left_minus_eps = af.shift(f_right_minus_eps, 1)
-        # Extending the same to bot:
-        f_bot_minus_eps  = af.shift(f_top_minus_eps, 0, 1)
-        # Extending the same to back:
-        f_back_minus_eps = af.shift(f_front_minus_eps, 0, 0, 1)
-
-        # flipping due to strange error seen when working with
-        # multiple species on the CPU backend where f != flip(flip(f))
-        # Doesn't seem to be a problem on CUDA:
-        # Yet to test on OpenCL
-        # TODO: Find exact cause for this bug.
-        # f != flip(flip(f)) seems to happen after conversion to p_expanded
-        # flux_p1 = self._C_p1 * af.flip(af.flip(f))
-        # flux_p2 = self._C_p2 * af.flip(af.flip(f))
-        # flux_p3 = self._C_p3 * af.flip(af.flip(f))
-                
-        f_left_p1 = riemann_solver(self, f_left_minus_eps, f_left_plus_eps, self._C_p1)
-        f_bot_p2  = riemann_solver(self, f_bot_minus_eps, f_bot_plus_eps, self._C_p2)
-        f_back_p3 = riemann_solver(self, f_back_minus_eps, f_back_plus_eps, self._C_p3)
-        
-        left_flux_p1 = multiply(self._C_p1, f_left_p1)
-        bot_flux_p2  = multiply(self._C_p2, f_bot_p2)
-        back_flux_p3 = multiply(self._C_p3, f_back_p3)
+            left_flux_p1 = 0.5 * (multiply(self._C_p1_left, fl_left_p1) + multiply(self._C_p1_bot, fb_left_p1))
+            bot_flux_p2  = 0.5 * (multiply(self._C_p1_left, fl_bot_p2)  + multiply(self._C_p1_bot, fb_bot_p2))
+            back_flux_p3 = 0.5 * (multiply(self._C_p1_left, fl_back_p3) + multiply(self._C_p1_bot, fb_back_p3))
 
         right_flux_p1 = af.shift(left_flux_p1, -1)
         top_flux_p2   = af.shift(bot_flux_p2,   0, -1)

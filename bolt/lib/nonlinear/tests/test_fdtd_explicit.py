@@ -35,7 +35,7 @@ import bolt.src.nonrelativistic_boltzmann.moments as moments
 
 # Optimized plot parameters to make beautiful plots:
 pl.rcParams['figure.figsize']  = 15, 10
-pl.rcParams['figure.dpi']      = 300
+pl.rcParams['figure.dpi']      = 100
 pl.rcParams['image.cmap']      = 'gist_heat'
 pl.rcParams['lines.linewidth'] = 1.5
 pl.rcParams['font.family']     = 'serif'
@@ -412,7 +412,7 @@ def test_fdtd_mode1_mirror():
 
 def test_fdtd_mode2_mirror():
 
-    N = 2**np.arange(5, 11)
+    N = 2**np.arange(5, 8)
 
     error_E1 = np.zeros(N.size)
     error_E2 = np.zeros(N.size)
@@ -438,9 +438,10 @@ def test_fdtd_mode2_mirror():
             # pl.gca().axes.xaxis.set_ticklabels([])
             # pl.gca().axes.yaxis.set_ticklabels([])
             # pl.title(r'$E_x$')
-            # pl.contourf(np.array(obj.fields_solver.q1_center).reshape(38, 38),
-            #             np.array(obj.fields_solver.q2_center).reshape(38, 38),
-            #             np.array(obj.fields_solver.yee_grid_EM_fields[0, :, :, :]).reshape(38, 38), 
+            # pl.plot()
+            # pl.contourf(np.array(obj.fields_solver.q1_center).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g)[N_g:-N_g, N_g:-N_g],
+            #             np.array(obj.fields_solver.q2_center).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g)[N_g:-N_g, N_g:-N_g],
+            #             np.array(obj.fields_solver.yee_grid_EM_fields[0, :, :, :]).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g)[N_g:-N_g, N_g:-N_g], 
             #             100
             #            )
 
@@ -448,22 +449,35 @@ def test_fdtd_mode2_mirror():
             # pl.gca().axes.xaxis.set_ticklabels([])
             # pl.gca().axes.yaxis.set_ticklabels([])
             # pl.title(r'$E_y$')
-            # pl.contourf(np.array(obj.fields_solver.q1_center).reshape(38, 38),
-            #             np.array(obj.fields_solver.q2_center).reshape(38, 38),
-            #             np.array(obj.fields_solver.yee_grid_EM_fields[1, :, :, :]).reshape(38, 38), 
+            # pl.contourf(np.array(obj.fields_solver.q1_center).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g)[N_g:-N_g, N_g:-N_g],
+            #             np.array(obj.fields_solver.q2_center).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g)[N_g:-N_g, N_g:-N_g],
+            #             np.array(obj.fields_solver.yee_grid_EM_fields[1, :, :, :]).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g)[N_g:-N_g, N_g:-N_g], 
             #             100
             #            )
 
             # pl.subplot(3, 1, 3)
             # pl.title(r'$B_z$')
-            # pl.contourf(np.array(obj.fields_solver.q1_center).reshape(38, 38),
-            #             np.array(obj.fields_solver.q2_center).reshape(38, 38),
-            #             np.array(obj.fields_solver.yee_grid_EM_fields[5, :, :, :]).reshape(38, 38), 
+            # pl.contourf(np.array(obj.fields_solver.q1_center).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g)[N_g:-N_g, N_g:-N_g],
+            #             np.array(obj.fields_solver.q2_center).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g)[N_g:-N_g, N_g:-N_g],
+            #             np.array(obj.fields_solver.yee_grid_EM_fields[5, :, :, :]).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g)[N_g:-N_g, N_g:-N_g], 
             #             100
             #            )
             # pl.xlabel(r'$x$')
             # pl.ylabel(r'$y$')
-            # pl.savefig('images/%04d'%time_index + '.png')
+
+            # pl.plot(np.array(obj.fields_solver.q1_center_bot[:, :, N_g:-N_g, 0]).ravel(), 
+            #         np.array(obj.fields_solver.yee_grid_EM_fields[1, :, N_g:-N_g, 0]).ravel(),
+            #         label = r'$E_y$'
+            #        )
+            # pl.plot(np.array(obj.fields_solver.q1_left_bot[:, :, N_g:-N_g, 0]).ravel(), 
+            #         np.array(obj.fields_solver.yee_grid_EM_fields[5, :, N_g:-N_g, 0]).ravel(),
+            #         label = r'$B_z$'
+            #        )
+            # pl.title('Time = %.2f'%t0)
+            # pl.ylim([-3, 3])
+            # pl.xlabel(r'$x$')
+            # pl.legend(loc = 'upper right')
+            # pl.savefig('images/%04d'%time_index + '.png', bbox_inches = 'tight')
             # pl.clf()
 
             J1 = J2 = J3 = 0 * obj.fields_solver.q1_center**0
@@ -497,7 +511,7 @@ def test_fdtd_mode2_mirror():
     print(poly_E2)
     print(poly_B3)
 
-    pl.loglog(N, error_E1, '-o', label = r'$E_x$')
+    # pl.loglog(N, error_E1, '-o', label = r'$E_x$')
     pl.loglog(N, error_E2, '-o', label = r'$E_y$')
     pl.loglog(N, error_B3, '-o', label = r'$B_z$')
     pl.loglog(N, error_B3[0]*N[0]**2/N**2, '--', color = 'black', 
