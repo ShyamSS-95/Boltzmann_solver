@@ -433,98 +433,33 @@ def apply_mirror_bcs_fields(self, boundary, on_fdtd_grid):
 
     N_g = self.N_g
     if(boundary == 'left'):
-        # x-0-x-0-x-0-|-0-x-0-x-0-x-....
-        #   0   1   2   3   4   5
-        # For mirror boundary conditions:
-        # 0 = 5; 1 = 4; 2 = 3;
+        # Ensuring that E2 and E3 are zero at x = 0:
+
         if(on_fdtd_grid == True):
-            # Reflecting E2 and E3 about y-axis:
-            # E2 --> (i + 1/2, j)
-            # E3 --> (i + 1/2, j + 1/2)
-            # As an implication of this, dB3/dt(x = 0) = 0
-            #                            dB2/dt(x = 0) = 0
-            self.yee_grid_EM_fields[1:3, :, :N_g] = \
-                af.flip(self.yee_grid_EM_fields[1:3, :, N_g:2 * N_g], 2)
-
-            # ALTERNATE: Trying out:
-            # Setting electric fields within boundaries to zero:
-            # self.yee_grid_EM_fields[0, :, :(N_g+1)] = 0 # E1 --> (i, j + 1/2)
-            # self.yee_grid_EM_fields[1, :, :N_g] = 0 # E2 --> (i + 1/2, j)
-            # self.yee_grid_EM_fields[2, :, :N_g] = 0 # E3 --> (i + 1/2, j + 1/2)
-
-            # Since dB/dt = -(∇ x E), the values in the boundaries should remain unchanged:
-            # initial_magnetic_fields = self.initialize_magnetic_fields(False)
-            # self.yee_grid_EM_fields[3, :, :N_g]     = initial_magnetic_fields[0, :, :N_g] # B1 --> (i + 1/2, j)
-            # self.yee_grid_EM_fields[4, :, :(N_g+1)] = initial_magnetic_fields[1, :, :(N_g+1)] # B2 --> (i, j + 1/2)
-            # self.yee_grid_EM_fields[5, :, :(N_g+1)] = initial_magnetic_fields[2, :, :(N_g+1)] # B3 --> (i, j)
+            self.yee_grid_EM_fields[1:3, :, N_g-1] = -self.yee_grid_EM_fields[1:3, :, N_g]
 
         else:
-            self.cell_centered_EM_fields[:, :, :N_g] = \
-                af.flip(self.cell_centered_EM_fields[:, :, N_g:2 * N_g], 2)
+            self.cell_centered_EM_fields[1:3, :, N_g-1] = -self.cell_centered_EM_fields[1:3, :, N_g]
 
     elif(boundary == 'right'):
-        # ...-x-0-x-0-x-0-|-0-x-0-x-0-x
-        #      -6  -5  -4  -3  -2  -1
-        # For mirror boundary conditions:
-        # -1 = -6; -2 = -5; -3 = -4;
-        
+        # Ensuring that E2 and E3 are zero at x = L_x:
+
         if(on_fdtd_grid == True):
-            # Reflecting E2 and E3 about y-axis:
-            # E2 --> (i + 1/2, j)
-            # E3 --> (i + 1/2, j + 1/2)
-            # As an implication of this, dB3/dt(x = L) = 0
-            #                            dB2/dt(x = L) = 0
-            self.yee_grid_EM_fields[1:3, :, -N_g:] = \
-                af.flip(self.yee_grid_EM_fields[1:3, :, -2 * N_g:-N_g], 2)
-
-            # ALTERNATE: Trying out:
-            # Setting electric fields within boundaries to zero:
-            # self.yee_grid_EM_fields[0, :, -N_g:] = 0 * self.yee_grid_EM_fields[0, :, -N_g:] # E1 --> (i, j + 1/2)
-            # self.yee_grid_EM_fields[1, :, -N_g:] = 0 * self.yee_grid_EM_fields[1, :, -N_g:] # E2 --> (i + 1/2, j)
-            # self.yee_grid_EM_fields[2, :, -N_g:] = 0 * self.yee_grid_EM_fields[2, :, -N_g:] # E3 --> (i + 1/2, j + 1/2)
-
-            # Since dB/dt = -(∇ x E), the values in the boundaries should remain unchanged:
-            # initial_magnetic_fields = self.initialize_magnetic_fields(False)
-            # self.yee_grid_EM_fields[3, :, -N_g:] = initial_magnetic_fields[0, :, -N_g:] # B1 --> (i + 1/2, j)
-            # self.yee_grid_EM_fields[4, :, -N_g:] = initial_magnetic_fields[1, :, -N_g:] # B2 --> (i, j + 1/2)
-            # self.yee_grid_EM_fields[5, :, -N_g] = initial_magnetic_fields[2, :, -N_g] # B3 --> (i, j)
+            self.yee_grid_EM_fields[1:3, :, -N_g] = -self.yee_grid_EM_fields[1:3, :, -N_g-1]
 
         else:
-            self.cell_centered_EM_fields[:, :, -N_g:] = \
-                af.flip(self.cell_centered_EM_fields[:, :, -2 * N_g:-N_g], 2)
+            self.cell_centered_EM_fields[1:3, :, -N_g] = -self.cell_centered_EM_fields[1:3, :, -N_g-1]
 
     elif(boundary == 'bottom'):
-        # x-0-x-0-x-0-|-0-x-0-x-0-x-....
-        #   0   1   2   3   4   5
-        # For mirror boundary conditions:
-        # 0 = 5; 1 = 4; 2 = 3;
+        # Ensuring that E1 and E3 are zero at y = 0:
 
         if(on_fdtd_grid == True):
-            # Reflecting E1 and E3 about x-axis:
-            # E2 --> (i, j + 1/2)
-            # E3 --> (i + 1/2, j + 1/2)
-            # As an implication of this, dB3/dt(y = 0) = 0
-            #                            dB1/dt(y = 0) = 0
-            self.yee_grid_EM_fields[0, :, :, :N_g] = \
-                af.flip(self.yee_grid_EM_fields[0, :, :, N_g:2 * N_g], 3)
-            self.yee_grid_EM_fields[2, :, :, :N_g] = \
-                af.flip(self.yee_grid_EM_fields[2, :, :, N_g:2 * N_g], 3)
-
-            # ALTERNATE: Trying out:
-            # Setting electric fields within boundaries to zero:
-            # self.yee_grid_EM_fields[0, :, :, :(N_g+1)] = 0 # E1 --> (i, j + 1/2)
-            # self.yee_grid_EM_fields[1, :, :, :N_g] = 0 # E2 --> (i + 1/2, j)
-            # self.yee_grid_EM_fields[2, :, :, :N_g] = 0 # E3 --> (i + 1/2, j + 1/2)
-
-            # Since dB/dt = -(∇ x E), the values in the boundaries should remain unchanged:
-            # initial_magnetic_fields = self.initialize_magnetic_fields(False)
-            # self.yee_grid_EM_fields[3, :, :, :N_g]     = initial_magnetic_fields[0, :, :, :N_g] # B1 --> (i + 1/2, j)
-            # self.yee_grid_EM_fields[4, :, :, :(N_g+1)] = initial_magnetic_fields[1, :, :, :(N_g+1)] # B2 --> (i, j + 1/2)
-            # self.yee_grid_EM_fields[5, :, :, :(N_g+1)] = initial_magnetic_fields[2, :, :, :(N_g+1)] # B3 --> (i, j)
+            self.yee_grid_EM_fields[0, :, :, N_g-1] = -self.yee_grid_EM_fields[0, :, :, N_g]
+            self.yee_grid_EM_fields[2, :, :, N_g-1] = -self.yee_grid_EM_fields[2, :, :, N_g]
 
         else:
-            self.cell_centered_EM_fields[:, :, :, :N_g] = \
-                af.flip(self.cell_centered_EM_fields[:, :, :, N_g:2 * N_g], 3)
+            self.cell_centered_EM_fields[0, :, :, N_g-1] = -self.cell_centered_EM_fields[0, :, :, N_g]
+            self.cell_centered_EM_fields[2, :, :, N_g-1] = -self.cell_centered_EM_fields[2, :, :, N_g]
 
     elif(boundary == 'top'):
         # ...-x-0-x-0-x-0-|-0-x-0-x-0-x
@@ -533,33 +468,12 @@ def apply_mirror_bcs_fields(self, boundary, on_fdtd_grid):
         # -1 = -6; -2 = -5; -3 = -4;
 
         if(on_fdtd_grid == True):
-            # Reflecting E1 and E3 about x-axis:
-            # E2 --> (i, j + 1/2)
-            # E3 --> (i + 1/2, j + 1/2)
-            # As an implication of this, dB3/dt(y = L) = 0
-            #                            dB1/dt(y = L) = 0
-
-            self.yee_grid_EM_fields[0, :, :, -N_g:] = \
-                af.flip(self.yee_grid_EM_fields[0, :, :, -2 * N_g:-N_g], 3)
-
-            self.yee_grid_EM_fields[2, :, :, -N_g:] = \
-                af.flip(self.yee_grid_EM_fields[2, :, :, -2 * N_g:-N_g], 3)
-
-            # ALTERNATE: Trying out:
-            # Setting electric fields within boundaries to zero:
-            # self.yee_grid_EM_fields[0, :, :, -N_g:] = 0 * self.yee_grid_EM_fields[0, :, :, -N_g:] # E1 --> (i, j + 1/2)
-            # self.yee_grid_EM_fields[1, :, :, -N_g:] = 0 * self.yee_grid_EM_fields[1, :, :, -N_g:] # E2 --> (i + 1/2, j)
-            # self.yee_grid_EM_fields[2, :, :, -N_g:] = 0 * self.yee_grid_EM_fields[2, :, :, -N_g:] # E3 --> (i + 1/2, j + 1/2)
-
-            # Since dB/dt = -(∇ x E), the values in the boundaries should remain unchanged:
-            # initial_magnetic_fields = self.initialize_magnetic_fields(False)
-            # self.yee_grid_EM_fields[3, :, :, -N_g:] = initial_magnetic_fields[0, :, :, -N_g:] # B1 --> (i + 1/2, j)
-            # self.yee_grid_EM_fields[4, :, :, -N_g:] = initial_magnetic_fields[1, :, :, -N_g:] # B2 --> (i, j + 1/2)
-            # self.yee_grid_EM_fields[5, :, :, -N_g] = initial_magnetic_fields[2, :, :, -N_g] # B3 --> (i, j)
+            self.yee_grid_EM_fields[0, :, :, -N_g] = -self.yee_grid_EM_fields[0, :, :, -N_g-1]
+            self.yee_grid_EM_fields[2, :, :, -N_g] = -self.yee_grid_EM_fields[2, :, :, -N_g-1]
 
         else:
-            self.cell_centered_EM_fields[:, :, :, -N_g:] = \
-                af.flip(self.cell_centered_EM_fields[:, :, :, -2 * N_g:-N_g], 3)
+            self.cell_centered_EM_fields[0, :, :, -N_g] = -self.cell_centered_EM_fields[0, :, :, -N_g-1]
+            self.cell_centered_EM_fields[2, :, :, -N_g] = -self.cell_centered_EM_fields[2, :, :, -N_g-1]
 
     else:
         raise Exception('Invalid choice for boundary')

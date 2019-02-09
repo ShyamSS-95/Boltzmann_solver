@@ -26,6 +26,8 @@ from input_files import domain
 from input_files import params
 from input_files import initialize_fdtd_mode1
 from input_files import initialize_fdtd_mode2
+from input_files import initialize_fdtd_mode1_mirror
+from input_files import initialize_fdtd_mode2_mirror
 from input_files import boundary_conditions
 from input_files import boundary_conditions_mirror
 
@@ -69,6 +71,9 @@ class test_periodic(object):
 
         domain.N_q1 = int(N)
         domain.N_q2 = int(N)
+        domain.N_p1 = 1
+        domain.N_p2 = 1
+        domain.N_p3 = 1
 
         N_g    = domain.N_ghost
         system = physical_system(domain,
@@ -96,6 +101,9 @@ class test_mirror(object):
 
         domain.N_q1 = int(N)
         domain.N_q2 = int(N)
+        domain.N_p1 = 1
+        domain.N_p2 = 1
+        domain.N_p3 = 1
 
         N_g    = domain.N_ghost
         system = physical_system(domain,
@@ -119,7 +127,7 @@ class test_mirror(object):
 
 def test_fdtd_mode1_periodic():
 
-    N = np.array([128]) #2**np.arange(5, 8)
+    N = 2**np.arange(5, 8)
 
     error_B1 = np.zeros(N.size)
     error_B2 = np.zeros(N.size)
@@ -128,8 +136,8 @@ def test_fdtd_mode1_periodic():
     for i in range(N.size):
 
         af.device_gc()
-        dt   = (1 / int(N[i])) * 1 / 2
-        time = np.arange(dt, 10 * 1 + dt, dt)
+        dt   = (1 / int(N[i])) * np.sqrt(9/5) / 2
+        time = np.arange(dt, np.sqrt(9/5) + dt, dt)
 
         params.dt = dt
 
@@ -205,11 +213,11 @@ def test_fdtd_mode1_periodic():
             # else:
             #     error[time_index] = abs((energy) * obj.fields_solver.dq1 * obj.fields_solver.dq2 -  error[0])
 
-        import h5py
-        h5f = h5py.File('data/Bi+n-_Ei+n+.h5', 'w')
-        h5f.create_dataset('data', data = energy[1:])
-        h5f.create_dataset('time', data = time[1:])
-        h5f.close()
+        # import h5py
+        # h5f = h5py.File('data/Bi+n-_Ei+n+.h5', 'w')
+        # h5f.create_dataset('data', data = energy[1:])
+        # h5f.create_dataset('time', data = time[1:])
+        # h5f.close()
 
         # pl.plot(time[1:], energy[1:])
         # pl.show()
@@ -261,7 +269,7 @@ def test_fdtd_mode1_periodic():
 
 def test_fdtd_mode2_periodic():
 
-    N = np.array([64]) #2**np.arange(5, 8)
+    N = 2**np.arange(5, 8)
 
     error_E1 = np.zeros(N.size)
     error_E2 = np.zeros(N.size)
@@ -270,7 +278,7 @@ def test_fdtd_mode2_periodic():
     for i in range(N.size):
 
         dt   = (1 / int(N[i])) * np.sqrt(9/5) / 2
-        time = np.arange(dt, 10 * np.sqrt(9/5) + dt, dt)
+        time = np.arange(dt, 1 * np.sqrt(9/5) + dt, dt)
 
         params.dt = dt
 
@@ -302,11 +310,11 @@ def test_fdtd_mode2_periodic():
             else:
                 error[time_index] = abs((energy) * obj.fields_solver.dq1 * obj.fields_solver.dq2 -  error[0])
 
-        pl.semilogy(time[1:], error[1:])
-        pl.ylabel('Error')
-        pl.xlabel('Time')
-        pl.ylim([1e-15, 1e-9])
-        pl.savefig('plot.png', bbox_inches = 'tight')
+        # pl.semilogy(time[1:], error[1:])
+        # pl.ylabel('Error')
+        # pl.xlabel('Time')
+        # pl.ylim([1e-15, 1e-9])
+        # pl.savefig('plot.png', bbox_inches = 'tight')
 
         error_E1[i] = af.sum(af.abs(obj.fields_solver.yee_grid_EM_fields[0, :, N_g:-N_g, N_g:-N_g] -
                                     E1_initial[:, :, N_g:-N_g, N_g:-N_g]
@@ -350,7 +358,7 @@ def test_fdtd_mode2_periodic():
 
 def test_fdtd_mode1_mirror():
 
-    N = 2**np.arange(5, 8)
+    N = 2**np.arange(6, 10)
 
     error_B1 = np.zeros(N.size)
     error_B2 = np.zeros(N.size)
@@ -358,12 +366,12 @@ def test_fdtd_mode1_mirror():
 
     for i in range(N.size):
 
-        dt   = (1 / int(N[i])) * np.sqrt(9/5) / 2
-        time = np.arange(dt, 4 * np.sqrt(9/5) + dt, dt)
+        dt   = (1 / int(N[i])) *  np.sqrt(1/5) / 2
+        time = np.arange(dt, 2 * np.sqrt(1/5) + dt, dt)
 
         params.dt = dt
 
-        obj = test_mirror(N[i], initialize_fdtd_mode2, params)
+        obj = test_mirror(N[i], initialize_fdtd_mode1_mirror, params)
         N_g = obj.fields_solver.N_g
 
         B1_initial = obj.fields_solver.yee_grid_EM_fields[3].copy()
@@ -372,6 +380,40 @@ def test_fdtd_mode1_mirror():
 
         for time_index, t0 in enumerate(time):
             J1 = J2 = J3 = 0 * obj.fields_solver.q1_center**0
+
+            # pl.subplot(3, 1, 1)
+            # pl.gca().axes.xaxis.set_ticklabels([])
+            # pl.gca().axes.yaxis.set_ticklabels([])
+            # pl.title(r'$B_x$')
+            # pl.plot()
+            # pl.contourf(np.array(obj.fields_solver.q1_center).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g),
+            #             np.array(obj.fields_solver.q2_center).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g),
+            #             np.array(obj.fields_solver.yee_grid_EM_fields[3, :, :, :]).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g), 
+            #             100
+            #            )
+
+            # pl.subplot(3, 1, 2)
+            # pl.gca().axes.xaxis.set_ticklabels([])
+            # pl.gca().axes.yaxis.set_ticklabels([])
+            # pl.title(r'$B_y$')
+            # pl.contourf(np.array(obj.fields_solver.q1_center).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g),
+            #             np.array(obj.fields_solver.q2_center).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g),
+            #             np.array(obj.fields_solver.yee_grid_EM_fields[4, :, :, :]).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g), 
+            #             100
+            #            )
+
+            # pl.subplot(3, 1, 3)
+            # pl.title(r'$E_z$')
+            # pl.contourf(np.array(obj.fields_solver.q1_center).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g),
+            #             np.array(obj.fields_solver.q2_center).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g),
+            #             np.array(obj.fields_solver.yee_grid_EM_fields[2, :, :, :]).reshape(N[0] + 2 * N_g, N[0] + 2 * N_g), 
+            #             100
+            #            )
+            # pl.xlabel(r'$x$')
+            # pl.ylabel(r'$y$')
+            # pl.savefig('images/%04d'%time_index + '.png', bbox_inches = 'tight')
+            # pl.clf()
+
             obj.fields_solver.evolve_electrodynamic_fields(J1, J2, J3, dt)
 
         error_B1[i] = af.sum(af.abs(obj.fields_solver.yee_grid_EM_fields[3, :, N_g:-N_g, N_g:-N_g] -
@@ -397,18 +439,22 @@ def test_fdtd_mode1_mirror():
     poly_B2 = np.polyfit(np.log10(N), np.log10(error_B2), 1)
     poly_E3 = np.polyfit(np.log10(N), np.log10(error_E3), 1)
 
+    print(poly_B1)
+    print(poly_B2)
+    print(poly_E3)
+
     pl.loglog(N, error_B1, '-o', label = r'$B_x$')
     pl.loglog(N, error_B2, '-o', label = r'$B_y$')
     pl.loglog(N, error_E3, '-o', label = r'$E_z$')
-    pl.loglog(N, error_B1[0]*32**2/N**2, '--', color = 'black', label = r'$O(N^{-2})$')
+    pl.loglog(N, error_E3[0] * N[0]**2/N**2, '--', color = 'black', label = r'$\mathcal{O}(N^{-2})$')
     pl.xlabel(r'$N$')
     pl.ylabel('Error')
     pl.legend()
     pl.savefig('convergenceplot.png')
 
-    assert (abs(poly_B1[0] + 1) < 0.2)
-    assert (abs(poly_B2[0] + 1) < 0.2)
-    assert (abs(poly_E3[0] + 1) < 0.2)
+    assert (abs(poly_B1[0] + 3) < 0.3)
+    assert (abs(poly_B2[0] + 3) < 0.3)
+    assert (abs(poly_E3[0] + 2) < 0.3)
 
 def test_fdtd_mode2_mirror():
 
@@ -420,12 +466,12 @@ def test_fdtd_mode2_mirror():
 
     for i in range(N.size):
 
-        dt   = (1 / int(N[i])) *  1 / 2
-        time = np.arange(dt, 4 * 1 + dt, dt)
+        dt   = (1 / int(N[i])) *  np.sqrt(1/5) / 2
+        time = np.arange(dt, 2 * np.sqrt(1/5) + dt, dt)
 
         params.dt = dt
 
-        obj = test_mirror(N[i], initialize_fdtd_mode2, params)
+        obj = test_mirror(N[i], initialize_fdtd_mode2_mirror, params)
         N_g = obj.fields_solver.N_g
 
         E1_initial = obj.fields_solver.yee_grid_EM_fields[0].copy()
@@ -503,15 +549,7 @@ def test_fdtd_mode2_mirror():
     poly_E2 = np.polyfit(np.log10(N), np.log10(error_E2), 1)
     poly_B3 = np.polyfit(np.log10(N), np.log10(error_B3), 1)
 
-    print(error_E1)
-    print(error_E2)
-    print(error_B3)
-
-    print(poly_E1)
-    print(poly_E2)
-    print(poly_B3)
-
-    # pl.loglog(N, error_E1, '-o', label = r'$E_x$')
+    pl.loglog(N, error_E1, '-o', label = r'$E_x$')
     pl.loglog(N, error_E2, '-o', label = r'$E_y$')
     pl.loglog(N, error_B3, '-o', label = r'$B_z$')
     pl.loglog(N, error_B3[0]*N[0]**2/N**2, '--', color = 'black', 
@@ -522,8 +560,6 @@ def test_fdtd_mode2_mirror():
     pl.legend(framealpha = 0)
     pl.savefig('convergenceplot.png', bbox_inches = 'tight')
 
-    assert (abs(poly_E1[0] + 2) < 0.4)
-    assert (abs(poly_E2[0] + 2) < 0.4) 
+    assert (abs(poly_E1[0] + 3) < 0.4)
+    assert (abs(poly_E2[0] + 3) < 0.4) 
     assert (abs(poly_B3[0] + 2) < 0.4)
-
-test_fdtd_mode2_mirror()

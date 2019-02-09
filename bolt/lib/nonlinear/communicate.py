@@ -75,6 +75,8 @@ def communicate_fields(self, on_fdtd_grid = False):
     # Obtaining start coordinates for the local zone
     # Additionally, we also obtain the size of the local zone
     ((i_q1_start, i_q2_start), (N_q1_local, N_q2_local)) = self._da_fields.getCorners()
+    # Obtaining the end coordinates for the local zone
+    (i_q1_end, i_q2_end) = (i_q1_start + N_q1_local - 1, i_q2_start + N_q2_local - 1)
 
     N_g = self.N_g
 
@@ -95,12 +97,36 @@ def communicate_fields(self, on_fdtd_grid = False):
 
     # Converting back to af.Array
     if(on_fdtd_grid is True):
-        self.yee_grid_EM_fields = af.moddims(af.to_array(self._local_fields_array),
-                                             6, 1, N_q1_local + 2 * N_g,
-                                             N_q2_local + 2 * N_g
-                                            )
+        if(   self.boundary_conditions.in_q1_right  == 'mirror'
+           or self.boundary_conditions.in_q2_top    == 'mirror'
+          ):
+            temp = af.moddims(af.to_array(self._local_fields_array),
+                              6, 1, N_q1_local + 2 * N_g,
+                              N_q2_local + 2 * N_g
+                             )
+
+            if(self.boundary_conditions.in_q1_right == 'mirror'):
+                # If local zone includes the right physical boundary:
+                if(i_q1_end == self.N_q1 - 1):
+                    self.yee_grid_EM_fields[:, :, :-N_g, N_g:-N_g] = temp[:, :, :-N_g, N_g:-N_g]
+            else:
+                self.yee_grid_EM_fields[:, :, :, N_g:-N_g] = temp[:, :, :, N_g:-N_g]
+
+            if(self.boundary_conditions.in_q2_top == 'mirror'):
+                # If local zone includes the top physical boundary:
+                if(i_q2_end == self.N_q2 - 1):
+                    self.yee_grid_EM_fields[:, :, N_g:-N_g, :-N_g] = temp[:, :, N_g:-N_g, :-N_g]
+            else:
+                self.yee_grid_EM_fields[:, :, N_g:-N_g, :] = temp[:, :, N_g:-N_g, :]
+
+        else:
+    
+            self.yee_grid_EM_fields = af.moddims(af.to_array(self._local_fields_array),
+                                                 6, 1, N_q1_local + 2 * N_g,
+                                                 N_q2_local + 2 * N_g
+                                                )
         
-        af.eval(self.yee_grid_EM_fields)
+            af.eval(self.yee_grid_EM_fields)
 
     else:
 

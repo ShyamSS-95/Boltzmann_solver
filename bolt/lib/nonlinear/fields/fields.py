@@ -164,7 +164,7 @@ class fields_solver(object):
                                               proc_sizes    = (nproc_in_q1, 
                                                                nproc_in_q2
                                                               ),
-                                              stencil_type  = 1,
+                                              stencil_type  = 0,
                                               comm          = self._comm
                                              )
 
@@ -451,10 +451,10 @@ class fields_solver(object):
             raise NotImplementedError('Method not valid/not implemented')
 
         # At t = 0, we take the value of B_{0} = B{1/2}:
-        self.cell_centered_EM_fields_at_n = self.cell_centered_EM_fields
-        self.cell_centered_EM_fields_at_n_plus_half = self.cell_centered_EM_fields
-        self.yee_grid_EM_fields_at_n = self.yee_grid_EM_fields
-        self.yee_grid_EM_fields_at_n_plus_half = self.yee_grid_EM_fields
+        self.cell_centered_EM_fields_at_n = self.cell_centered_EM_fields.copy()
+        self.cell_centered_EM_fields_at_n_plus_half = self.cell_centered_EM_fields.copy()
+        self.yee_grid_EM_fields_at_n = self.yee_grid_EM_fields.copy()
+        self.yee_grid_EM_fields_at_n_plus_half = self.yee_grid_EM_fields.copy()
 
         return
 
