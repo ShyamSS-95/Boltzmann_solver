@@ -16,7 +16,7 @@ import numpy as np
 import arrayfire as af
 from petsc4py import PETSc
 
-from bolt.lib.nonlinear_solver.communicate \
+from bolt.lib.nonlinear.communicate \
     import communicate_f, communicate_fields
 
 
@@ -35,31 +35,31 @@ class test_distribution_function(object):
         self.dq1 = (self.q1_end - self.q1_start) / self.N_q1
         self.dq2 = (self.q2_end - self.q2_start) / self.N_q2
 
-        self.N_ghost = np.random.randint(1, 5)
+        self.N_g = np.random.randint(1, 5)
 
         self.N_p1 = np.random.randint(16, 32)
         self.N_p2 = np.random.randint(16, 32)
         self.N_p3 = np.random.randint(16, 32)
 
         self.q1 =   self.q1_start \
-                  + (0.5 + np.arange(-self.N_ghost,
-                                     self.N_q1 + self.N_ghost
+                  + (0.5 + np.arange(-self.N_g,
+                                     self.N_q1 + self.N_g
                                     )
                     ) * self.dq1
 
         self.q2 =   self.q2_start \
-                  + (0.5 + np.arange(-self.N_ghost,
-                                     self.N_q2 + self.N_ghost
+                  + (0.5 + np.arange(-self.N_g,
+                                     self.N_q2 + self.N_g
                                     )
                     ) * self.dq2
 
         self.q1 = af.tile(af.to_array(self.q1), 1,
-                          self.N_q2 + 2 * self.N_ghost,
+                          self.N_q2 + 2 * self.N_g,
                           self.N_p1 * self.N_p2 * self.N_p3
                          )
 
         self.q2 = af.tile(af.reorder(af.to_array(self.q2)),
-                          self.N_q1 + 2 * self.N_ghost, 1,
+                          self.N_q1 + 2 * self.N_g, 1,
                           self.N_p1 * self.N_p2 * self.N_p3
                          )
 
@@ -68,7 +68,7 @@ class test_distribution_function(object):
 
         self._da_f = PETSc.DMDA().create([self.N_q1, self.N_q2],
                                          dof=(self.N_p1 * self.N_p2 * self.N_p3),
-                                         stencil_width=self.N_ghost,
+                                         stencil_width=self.N_g,
                                          boundary_type=('periodic', 'periodic'),
                                          stencil_type=1, 
                                         )
@@ -88,16 +88,16 @@ class test_distribution_function(object):
 
         self.f = af.constant(0,
                              self.N_p1 * self.N_p2 * self.N_p3,
-                             self.N_q1 + 2 * self.N_ghost,
-                             self.N_q2 + 2 * self.N_ghost,
+                             self.N_q1 + 2 * self.N_g,
+                             self.N_q2 + 2 * self.N_g,
                              dtype=af.Dtype.f64
                             )
 
-        self.f[:, self.N_ghost:-self.N_ghost,self.N_ghost:-self.N_ghost] = \
-            af.sin(2 * np.pi * self.q1 + 4 * np.pi * self.q2)[:, self.N_ghost:
-                                                              -self.N_ghost,
-                                                              self.N_ghost:
-                                                              -self.N_ghost
+        self.f[:, self.N_g:-self.N_g,self.N_g:-self.N_g] = \
+            af.sin(2 * np.pi * self.q1 + 4 * np.pi * self.q2)[:, self.N_g:
+                                                              -self.N_g,
+                                                              self.N_g:
+                                                              -self.N_g
                                                              ]
         
         self.performance_test_flag = False
@@ -118,17 +118,17 @@ class test_fields(object):
         self.dq1 = (self.q1_end - self.q1_start) / self.N_q1
         self.dq2 = (self.q2_end - self.q2_start) / self.N_q2
 
-        N_g = self.N_ghost = np.random.randint(1, 5)
+        N_g = self.N_g = np.random.randint(1, 5)
 
         self.q1 = self.q1_start \
-                  * (0.5 + np.arange(-self.N_ghost,
-                                     self.N_q1 + self.N_ghost
+                  * (0.5 + np.arange(-self.N_g,
+                                     self.N_q1 + self.N_g
                                     )
                     ) * self.dq1
 
         self.q2 = self.q2_start \
-                  * (0.5 + np.arange(-self.N_ghost,
-                                      self.N_q2 + self.N_ghost
+                  * (0.5 + np.arange(-self.N_g,
+                                      self.N_q2 + self.N_g
                                     )
                     ) * self.dq2
 
@@ -141,9 +141,12 @@ class test_fields(object):
         self.q1 = af.tile(self.q1, 6)
         self.q2 = af.tile(self.q2, 6)
 
+        self.q1 = af.reorder(self.q1, 0, 3, 1, 2)
+        self.q2 = af.reorder(self.q2, 0, 3, 1, 2)
+
         self._da_fields = PETSc.DMDA().create([self.N_q1, self.N_q2],
                                               dof=6,
-                                              stencil_width=self.N_ghost,
+                                              stencil_width=self.N_g,
                                               boundary_type=('periodic',
                                                              'periodic'),
                                               stencil_type=1,
@@ -155,13 +158,13 @@ class test_fields(object):
         self._glob_fields_array  = self._glob_fields.getArray()
         self._local_fields_array = self._local_fields.getArray()
 
-        self.cell_centered_EM_fields = af.constant(0, 6, self.q1.shape[1], 
-                                                   self.q1.shape[2],
+        self.cell_centered_EM_fields = af.constant(0, 6, 1, self.q1.shape[2], 
+                                                   self.q1.shape[3],
                                                    dtype=af.Dtype.f64
                                                   )
 
-        self.cell_centered_EM_fields[:, N_g:-N_g, N_g:-N_g] = \
-            af.sin(2 * np.pi * self.q1 + 4 * np.pi * self.q2)[:, N_g:-N_g,N_g:-N_g]
+        self.cell_centered_EM_fields[:, :, N_g:-N_g, N_g:-N_g] = \
+            af.sin(2 * np.pi * self.q1 + 4 * np.pi * self.q2)[:, :, N_g:-N_g,N_g:-N_g]
         
         self.performance_test_flag = False
 
@@ -176,7 +179,7 @@ def test_communicate_fields():
     obj = test_fields()
     communicate_fields(obj)
 
-    Ng = obj.N_ghost
+    Ng = obj.N_g
 
     expected = af.sin(2 * np.pi * obj.q1 + 4 * np.pi * obj.q2)
     assert (af.mean(af.abs(obj.cell_centered_EM_fields - expected)) < 5e-14)

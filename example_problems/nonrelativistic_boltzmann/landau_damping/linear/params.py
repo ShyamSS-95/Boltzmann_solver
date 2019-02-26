@@ -6,9 +6,9 @@ import bolt.src.nonrelativistic_boltzmann.units.time_scales as time_scales
 import bolt.src.nonrelativistic_boltzmann.units.velocity_scales as velocity_scales
 
 # Can be defined as 'electrostatic', 'user-defined', 'electrodynamic'.
-fields_type       = 'electrostatic'
+fields_type       = 'electrodynamic'
 fields_initialize = 'fft'
-fields_solver     = 'fft'
+fields_solver     = 'fdtd'
 
 # Method in q-space
 solver_method_in_q = 'FVM'
@@ -41,6 +41,7 @@ m0  = 1. # |m_e| units(m)
 e0  = 1. # |e| units(e)
 k0  = 1. # |k| units(k)
 eps = 1. # |eps0| units(eps0)
+mu  = 1.
 
 v0 = velocity_scales.thermal_speed(T0, m0, k0)
 t0 = 1/time_scales.plasma_frequency(n0, e0, m0, eps)
@@ -64,7 +65,7 @@ temperature_background = 1 * T0
 alpha = 0.01
 
 # Time parameters:
-N_cfl   = 0.9
+N_cfl   = 0.32
 t_final = 20.0
 
 # Switch for solver components:
@@ -72,6 +73,7 @@ fields_enabled           = True
 source_enabled           = False
 instantaneous_collisions = False
 hybrid_model_enabled     = False
+energy_conserving        = False
 
 # Variation of collisional-timescale parameter through phase space:
 @af.broadcast

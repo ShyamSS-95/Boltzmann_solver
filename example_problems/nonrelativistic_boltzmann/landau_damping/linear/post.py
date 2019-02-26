@@ -40,10 +40,6 @@ pl.rcParams['ytick.direction']  = 'in'
 h5f        = h5py.File('data.h5', 'r')
 n_nls      = h5f['n_nls'][:]
 E_nls      = h5f['E_nls'][:]
-time_array = h5f['time'][:]
-h5f.close()
-
-h5f        = h5py.File('data_ls.h5', 'r')
 n_ls       = h5f['n_ls'][:]
 E_ls       = h5f['E_ls'][:]
 time_array = h5f['time'][:]

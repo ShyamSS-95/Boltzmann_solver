@@ -164,7 +164,7 @@ class fields_solver(object):
                                               proc_sizes    = (nproc_in_q1, 
                                                                nproc_in_q2
                                                               ),
-                                              stencil_type  = 0,
+                                              stencil_type  = 1,
                                               comm          = self._comm
                                              )
 
@@ -575,22 +575,22 @@ class fields_solver(object):
 
         # E_at_n holds (E_x^n , E_y^n, E_z^n)
         # cell_centered_EM_fields[:3] => (E_x^n , E_y^n, E_z^n)
-        E_at_n = self.cell_centered_EM_fields[:3]
+        E_at_n = self.cell_centered_EM_fields[:3].copy()
         # Getting it for the yee grid:
-        E_yee_at_n = self.yee_grid_EM_fields[:3]
+        E_yee_at_n = self.yee_grid_EM_fields[:3].copy()
 
         self.cell_centered_EM_fields_at_n[:3] = E_at_n
         # Doing the same for Yee Grid fields:
-        self.yee_grid_EM_fields_at_n[:3] = self.yee_grid_EM_fields[:3]
+        self.yee_grid_EM_fields_at_n[:3] = self.yee_grid_EM_fields[:3].copy()
  
         # B_at_n_minus_half holds (B_x^{n-1/2} , B_y^{n-1/2}, B_z^{n-1/2})
         # cell_centered_EM_fields_at_n_plus_half[3:] => (B_x^{n-1/2} , B_y^{n-1/2}, B_z^{n-1/2})
         # ^ NOTE: This is because cell_centered_EM_fields_at_n_plus_half has not been updated for
         # this timestep, and holds the information for the previous timestep:
-        B_at_n_minus_half = self.cell_centered_EM_fields_at_n_plus_half[3:]
+        B_at_n_minus_half = self.cell_centered_EM_fields_at_n_plus_half[3:].copy()
 
         # cell_centered_EM_fields[3:] => (B_x^{n+1/2} , B_y^{n+1/2}, B_z^{n+1/2})
-        B_at_n_plus_half = self.cell_centered_EM_fields[3:]
+        B_at_n_plus_half = self.cell_centered_EM_fields[3:].copy()
 
         # cell_centered_EM_fields_at_n[3:] => (B_x^n , B_y^n, B_z^n)
         B_at_n = 0.5 * (B_at_n_minus_half + B_at_n_plus_half)
@@ -604,7 +604,7 @@ class fields_solver(object):
         # cell_centered_EM_fields_at_n_plus_half[3:] => (B_x^{n+1/2} , B_y^{n+1/2}, B_z^{n+1/2})
         self.cell_centered_EM_fields_at_n_plus_half[3:] = B_at_n_plus_half
         # Doing the same for Yee Grid fields:
-        self.yee_grid_EM_fields_at_n_plus_half[3:] = self.yee_grid_EM_fields[3:]
+        self.yee_grid_EM_fields_at_n_plus_half[3:] = self.yee_grid_EM_fields[3:].copy()
 
         # Evolving:
         # cell_centered_EM_fields[:3] => (E_x^n ,     E_y^n,     E_z^n) --> 
