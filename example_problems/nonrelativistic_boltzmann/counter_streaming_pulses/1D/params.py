@@ -75,6 +75,7 @@ fields_enabled           = True
 source_enabled           = False
 hybrid_model_enabled     = False
 instantaneous_collisions = False
+energy_conserving        = True
 
 # Variation of collisional-timescale parameter through phase space:
 @af.broadcast

@@ -62,10 +62,10 @@ n_background           = 1 * n0
 temperature_background = 1 * T0
 
 # Parameter controlling amplitude of perturbation introduced:
-alpha = 0.01
+alpha = 0.0001
 
 # Time parameters:
-N_cfl   = 0.32
+N_cfl   = 0.9
 t_final = 20.0
 
 # Switch for solver components:
@@ -73,7 +73,7 @@ fields_enabled           = True
 source_enabled           = False
 instantaneous_collisions = False
 hybrid_model_enabled     = False
-energy_conserving        = False
+energy_conserving        = True
 
 # Variation of collisional-timescale parameter through phase space:
 @af.broadcast
