@@ -369,6 +369,11 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
             f_bot   = self._convert_to_p_expanded(f_bot)
             f_top   = self._convert_to_p_expanded(f_top)
 
+            # NOTE: below fx_{...}, uses x to refer to the f used in q-space:
+            # x = l --> left  in q-space (i,     j+1/2)
+            # x = r --> right in q-space (i+1,   j+1/2)
+            # x = b --> bot   in q-space (i+1/2, j    )
+            # x = t --> top   in q-space (i+1/2, j+1  )
             # Variation of p1 is along axis 0:
             fl_left_plus_eps, fl_right_minus_eps = reconstruct(self, f_left, 0, reconstruction_in_p)
             # Variation of p2 is along axis 1:
@@ -442,13 +447,13 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
             ft_back_p3 = riemann_solver(self, ft_back_minus_eps, ft_back_plus_eps, self._C_p3_top)
         
             left_flux_p1 = 0.25 * (  multiply(self._C_p1_left, fl_left_p1) + multiply(self._C_p1_right, fr_left_p1)
-                                   + multiply(self._C_p1_bot, fb_left_p1) + multiply(self._C_p1_top, ft_left_p1)
+                                   + multiply(self._C_p1_bot, fb_left_p1)  + multiply(self._C_p1_top, ft_left_p1)
                                   ) 
-            bot_flux_p2  = 0.25 * (  multiply(self._C_p2_left, fl_bot_p2)  + multiply(self._C_p2_right, fr_bot_p2)
-                                   + multiply(self._C_p2_bot, fb_bot_p2) + multiply(self._C_p2_top, ft_bot_p2)
+            bot_flux_p2  = 0.25 * (  multiply(self._C_p2_left, fl_bot_p2) + multiply(self._C_p2_right, fr_bot_p2)
+                                    + multiply(self._C_p2_bot, fb_bot_p2) + multiply(self._C_p2_top, ft_bot_p2)
                                   ) 
             back_flux_p3 = 0.25 * (  multiply(self._C_p3_left, fl_back_p3) + multiply(self._C_p3_right, fr_back_p3)
-                                   + multiply(self._C_p3_bot, fb_back_p3) + multiply(self._C_p3_top, ft_back_p3)
+                                   + multiply(self._C_p3_bot, fb_back_p3)  + multiply(self._C_p3_top, ft_back_p3)
                                   ) 
 
         right_flux_p1 = af.shift(left_flux_p1, -1)
