@@ -777,9 +777,4 @@ class fields_solver(object):
                                 + af.shift(self.cell_centered_EM_fields_at_n_plus_half[5], 0, 0, -1, 0) # (i + 1, j)
                                )
 
-        if(self.params.solver_method_in_p == 'FVM'):
-            # Alternating upon each call for FVM:
-            # TEMP FIX: Need to change to something more clean
-            self.at_n = not(self.at_n)
-
         return(E1, E2, E3, B1, B2, B3)

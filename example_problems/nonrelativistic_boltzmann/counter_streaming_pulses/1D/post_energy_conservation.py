@@ -235,9 +235,9 @@ for time_index, t0 in enumerate(time_array[1:]):
 
 # pl.semilogy(time_array / params.t0, abs(kinetic_energy_error + electric_energy_error + magnetic_energy), label = r'$|$KE(t) - KE(t = 0)$|$')
 
-pl.plot(time_array[1:] / params.t0, kinetic_energy_data[1:], label = 'Kinetic Energy')
-pl.plot(time_array[1:] / params.t0, electric_energy_data[1:], label = 'Electric Energy')
-pl.plot(time_array[1:] / params.t0, magnetic_energy_data[1:] + electric_energy_data[1:], label = 'EM Energy')
+# pl.plot(time_array[1:] / params.t0, kinetic_energy_data[1:], label = 'Kinetic Energy')
+# pl.plot(time_array[1:] / params.t0, electric_energy_data[1:], label = 'Electric Energy')
+# pl.plot(time_array[1:] / params.t0, magnetic_energy_data[1:] + electric_energy_data[1:], label = 'EM Energy')
 pl.plot(time_array[1:] / params.t0, total_energy_data[1:], label = 'Total Energy')
 pl.legend()
 pl.xlabel(r'Time($\omega_p^{-1}$)')

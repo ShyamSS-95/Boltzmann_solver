@@ -106,7 +106,6 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
         if(    self.physical_system.params.fields_type == 'electrodynamic'
            and self.fields_solver.at_n == False
           ):
-            
             if(self.physical_system.params.hybrid_model_enabled == True):
 
                 communicate_fields(self.fields_solver, True)
@@ -271,6 +270,8 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
                                       self.fields_solver, self.physical_system.params
                                      )[2]
 
+            self.fields_solver.at_n = not(self.fields_solver.at_n)
+
             self._C_p1 = self._convert_to_p_expanded(self._C_p1)
             self._C_p2 = self._convert_to_p_expanded(self._C_p2)
             self._C_p3 = self._convert_to_p_expanded(self._C_p3)
@@ -340,9 +341,12 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
                                           self.fields_solver, self.physical_system.params, 'center_bottom'
                                          )[2]
 
+
             self._C_p1_top = af.shift(self._C_p1_bot, 0, 0, 0, -1)
             self._C_p2_top = af.shift(self._C_p2_bot, 0, 0, 0, -1)
             self._C_p3_top = af.shift(self._C_p3_bot, 0, 0, 0, -1)
+
+            self.fields_solver.at_n = not(self.fields_solver.at_n)
 
             self._C_p1_left = self._convert_to_p_expanded(self._C_p1_left)
             self._C_p2_left = self._convert_to_p_expanded(self._C_p2_left)
