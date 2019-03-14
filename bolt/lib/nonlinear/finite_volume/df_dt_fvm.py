@@ -76,13 +76,11 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
                                   self.physical_system.params
                                  )[1]
 
-        f_left  = riemann_solver(self, f_left_minus_eps, f_left_plus_eps, self._C_q1)
-        f_right = af.shift(f_left, 0, 0, -1)
-        f_bot   = riemann_solver(self, f_bot_minus_eps, f_bot_plus_eps, self._C_q2)
-        f_top   = af.shift(f_bot, 0, 0, 0, -1)
+        f_q1_left_q2_center  = riemann_solver(self, f_left_minus_eps, f_left_plus_eps, self._C_q1)
+        f_q1_center_q2_bot   = riemann_solver(self, f_bot_minus_eps, f_bot_plus_eps, self._C_q2)
 
-        left_flux = multiply(self._C_q1, f_left)
-        bot_flux  = multiply(self._C_q2, f_bot)
+        left_flux = multiply(self._C_q1, f_q1_left_q2_center)
+        bot_flux  = multiply(self._C_q2, f_q1_center_q2_bot)
 
         right_flux = af.shift(left_flux, 0, 0, -1)
         top_flux   = af.shift(bot_flux,  0, 0,  0, -1)
@@ -213,13 +211,13 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
                 af.eval(self.fields_solver.yee_grid_EM_fields)
 
             else:
-                
+
                 J1 = multiply(self.physical_system.params.charge,
-                              self.compute_moments('mom_v1_bulk', f = f_left)
+                              self.compute_moments('mom_v1_bulk', f = f_q1_left_q2_center)
                              ) # (i, j + 1/2)
 
                 J2 = multiply(self.physical_system.params.charge,
-                              self.compute_moments('mom_v2_bulk', f = f_bot)
+                              self.compute_moments('mom_v2_bulk', f = f_q1_center_q2_bot)
                              ) # (i + 1/2, j)
 
                 J3 = multiply(self.physical_system.params.charge, 
@@ -252,30 +250,38 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
             # the time level of the simulation. i.e:
             # On the n-th step it returns (E1^{n}, E2^{n}, E3^{n}, B1^{n}, B2^{n}, B3^{n})
             # On the (n+1/2)-th step it returns (E1^{n+1/2}, E2^{n+1/2}, E3^{n+1/2}, B1^{n+1/2}, B2^{n+1/2}, B3^{n+1/2})
-            self._C_p1 = af.broadcast(self._C_p, self.time_elapsed,
-                                      self.q1_center, self.q2_center,
-                                      self.p1_left, self.p2_left, self.p3_left,
-                                      self.fields_solver, self.physical_system.params
-                                     )[0]
+            self._C_p1_left_at_q1_center_q2_center \
+            = af.broadcast(self._C_p, self.time_elapsed,
+                           self.q1_center, self.q2_center,
+                           self.p1_left, self.p2_left, self.p3_left,
+                           self.fields_solver, self.physical_system.params
+                          )[0]
 
-            self._C_p2 = af.broadcast(self._C_p, self.time_elapsed,
-                                      self.q1_center, self.q2_center,
-                                      self.p1_bottom, self.p2_bottom, self.p3_bottom,
-                                      self.fields_solver, self.physical_system.params
-                                     )[1]
+            self._C_p2_bot_at_q1_center_q2_center \
+            = af.broadcast(self._C_p, self.time_elapsed,
+                           self.q1_center, self.q2_center,
+                           self.p1_bottom, self.p2_bottom, self.p3_bottom,
+                           self.fields_solver, self.physical_system.params
+                          )[1]
 
-            self._C_p3 = af.broadcast(self._C_p, self.time_elapsed,
-                                      self.q1_center, self.q2_center,
-                                      self.p1_back, self.p2_back, self.p3_back,
-                                      self.fields_solver, self.physical_system.params
-                                     )[2]
+            self._C_p3_back_at_q1_center_q2_center \
+            = af.broadcast(self._C_p, self.time_elapsed,
+                           self.q1_center, self.q2_center,
+                           self.p1_back, self.p2_back, self.p3_back,
+                           self.fields_solver, self.physical_system.params
+                          )[2]
 
             self.fields_solver.at_n = not(self.fields_solver.at_n)
 
-            self._C_p1 = self._convert_to_p_expanded(self._C_p1)
-            self._C_p2 = self._convert_to_p_expanded(self._C_p2)
-            self._C_p3 = self._convert_to_p_expanded(self._C_p3)
-            f          = self._convert_to_p_expanded(f)
+            # Converting to p-expanded form (Np1, Np2, Np3, Ns * Nq1 * Nq2):
+            self._C_p1_left_at_q1_center_q2_center \
+            = self._convert_to_p_expanded(self._C_p1_left_at_q1_center_q2_center)
+            self._C_p2_bot_at_q1_center_q2_center \
+            = self._convert_to_p_expanded(self._C_p2_bot_at_q1_center_q2_center)
+            self._C_p3_back_at_q1_center_q2_center \
+            = self._convert_to_p_expanded(self._C_p3_back_at_q1_center_q2_center)
+            
+            f = self._convert_to_p_expanded(f)
             
             # Variation of p1 is along axis 0:
             f_left_plus_eps, f_right_minus_eps = reconstruct(self, f, 0, reconstruction_in_p)
@@ -291,189 +297,271 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
             # Extending the same to back:
             f_back_minus_eps = af.shift(f_front_minus_eps, 0, 0, 1)
 
-            f_left_p1 = riemann_solver(self, f_left_minus_eps, f_left_plus_eps, self._C_p1)
-            f_bot_p2  = riemann_solver(self, f_bot_minus_eps, f_bot_plus_eps, self._C_p2)
-            f_back_p3 = riemann_solver(self, f_back_minus_eps, f_back_plus_eps, self._C_p3)
+            f_left_p1 = riemann_solver(self, f_left_minus_eps, f_left_plus_eps, 
+                                       self._C_p1_left_at_q1_center_q2_center
+                                      )
+            f_bot_p2  = riemann_solver(self, f_bot_minus_eps, f_bot_plus_eps, 
+                                       self._C_p2_bot_at_q1_center_q2_center
+                                      )
+            f_back_p3 = riemann_solver(self, f_back_minus_eps, f_back_plus_eps, 
+                                       self._C_p3_back_at_q1_center_q2_center
+                                      )
             
-            left_flux_p1 = multiply(self._C_p1, f_left_p1)
-            bot_flux_p2  = multiply(self._C_p2, f_bot_p2)
-            back_flux_p3 = multiply(self._C_p3, f_back_p3)
+            left_flux_p1 = multiply(self._C_p1_left_at_q1_center_q2_center, f_left_p1)
+            bot_flux_p2  = multiply(self._C_p2_bot_at_q1_center_q2_center, f_bot_p2)
+            back_flux_p3 = multiply(self._C_p3_back_at_q1_center_q2_center, f_back_p3)
+
+            right_flux_p1 = af.shift(left_flux_p1, -1)
+            top_flux_p2   = af.shift(bot_flux_p2,   0, -1)
+            front_flux_p3 = af.shift(back_flux_p3,  0,  0, -1)
+
+            left_flux_p1  = self._convert_to_q_expanded(left_flux_p1)
+            right_flux_p1 = self._convert_to_q_expanded(right_flux_p1)
+
+            bot_flux_p2 = self._convert_to_q_expanded(bot_flux_p2)
+            top_flux_p2 = self._convert_to_q_expanded(top_flux_p2)
+
+            back_flux_p3  = self._convert_to_q_expanded(back_flux_p3)
+            front_flux_p3 = self._convert_to_q_expanded(front_flux_p3)
+
+            d_flux_p1_dp1 = multiply((right_flux_p1 - left_flux_p1), 1 / self.dp1)
+            d_flux_p2_dp2 = multiply((top_flux_p2   - bot_flux_p2 ), 1 / self.dp2)
+            d_flux_p3_dp3 = multiply((front_flux_p3 - back_flux_p3), 1 / self.dp3)
+
+            df_dt += -(d_flux_p1_dp1 + d_flux_p2_dp2 + d_flux_p3_dp3)
 
         else:
 
-            self._C_p1_left = af.broadcast(self._C_p, self.time_elapsed,
-                                           self.q1_center, self.q2_center,
-                                           self.p1_left, self.p2_left, self.p3_left,
-                                           self.fields_solver, self.physical_system.params, 'left_center'
-                                          )[0]
+            # Getting C_p at q1_left_q2_center:
+            self._C_p1_left_at_q1_left_q2_center = af.broadcast(self._C_p, self.time_elapsed,
+                                                                self.q1_center, self.q2_center,
+                                                                self.p1_left, self.p2_left, self.p3_left,
+                                                                self.fields_solver, self.physical_system.params, 
+                                                                'left_center'
+                                                               )[0]
 
-            self._C_p2_left = af.broadcast(self._C_p, self.time_elapsed,
-                                           self.q1_center, self.q2_center,
-                                           self.p1_bottom, self.p2_bottom, self.p3_bottom,
-                                           self.fields_solver, self.physical_system.params, 'left_center'
-                                          )[1]
+            self._C_p2_bot_at_q1_left_q2_center = af.broadcast(self._C_p, self.time_elapsed,
+                                                               self.q1_center, self.q2_center,
+                                                               self.p1_bottom, self.p2_bottom, self.p3_bottom,
+                                                               self.fields_solver, self.physical_system.params, 
+                                                               'left_center'
+                                                              )[1]
 
-            self._C_p3_left = af.broadcast(self._C_p, self.time_elapsed,
-                                           self.q1_center, self.q2_center,
-                                           self.p1_back, self.p2_back, self.p3_back,
-                                           self.fields_solver, self.physical_system.params, 'left_center'
-                                          )[2]
+            self._C_p3_back_at_q1_left_q2_center = af.broadcast(self._C_p, self.time_elapsed,
+                                                                self.q1_center, self.q2_center,
+                                                                self.p1_back, self.p2_back, self.p3_back,
+                                                                self.fields_solver, self.physical_system.params, 
+                                                                'left_center'
+                                                               )[2]
 
-            self._C_p1_right = af.shift(self._C_p1_left, 0, 0, -1, 0)
-            self._C_p2_right = af.shift(self._C_p2_left, 0, 0, -1, 0)
-            self._C_p3_right = af.shift(self._C_p3_left, 0, 0, -1, 0)
+            # Getting C_p at q1_center_q2_bot:
+            self._C_p1_left_at_q1_center_q2_bot = af.broadcast(self._C_p, self.time_elapsed,
+                                                               self.q1_center, self.q2_center,
+                                                               self.p1_left, self.p2_left, self.p3_left,
+                                                               self.fields_solver, self.physical_system.params, 
+                                                               'center_bottom'
+                                                              )[0]
 
-            self._C_p1_bot = af.broadcast(self._C_p, self.time_elapsed,
-                                          self.q1_center, self.q2_center,
-                                          self.p1_left, self.p2_left, self.p3_left,
-                                          self.fields_solver, self.physical_system.params, 'center_bottom'
-                                         )[0]
+            self._C_p2_bot_at_q1_center_q2_bot = af.broadcast(self._C_p, self.time_elapsed,
+                                                              self.q1_center, self.q2_center,
+                                                              self.p1_bottom, self.p2_bottom, self.p3_bottom,
+                                                              self.fields_solver, self.physical_system.params, 
+                                                              'center_bottom'
+                                                             )[1]
 
-            self._C_p2_bot = af.broadcast(self._C_p, self.time_elapsed,
-                                          self.q1_center, self.q2_center,
-                                          self.p1_bottom, self.p2_bottom, self.p3_bottom,
-                                          self.fields_solver, self.physical_system.params, 'center_bottom'
-                                         )[1]
+            self._C_p3_back_at_q1_center_q2_bot = af.broadcast(self._C_p, self.time_elapsed,
+                                                               self.q1_center, self.q2_center,
+                                                               self.p1_back, self.p2_back, self.p3_back,
+                                                               self.fields_solver, self.physical_system.params, 
+                                                               'center_bottom'
+                                                              )[2]
 
-            self._C_p3_bot = af.broadcast(self._C_p, self.time_elapsed,
-                                          self.q1_center, self.q2_center,
-                                          self.p1_back, self.p2_back, self.p3_back,
-                                          self.fields_solver, self.physical_system.params, 'center_bottom'
-                                         )[2]
-
-
-            self._C_p1_top = af.shift(self._C_p1_bot, 0, 0, 0, -1)
-            self._C_p2_top = af.shift(self._C_p2_bot, 0, 0, 0, -1)
-            self._C_p3_top = af.shift(self._C_p3_bot, 0, 0, 0, -1)
-
+            # Alternating upon each call:
             self.fields_solver.at_n = not(self.fields_solver.at_n)
 
-            self._C_p1_left = self._convert_to_p_expanded(self._C_p1_left)
-            self._C_p2_left = self._convert_to_p_expanded(self._C_p2_left)
-            self._C_p3_left = self._convert_to_p_expanded(self._C_p3_left)
+            # Converting all variables to p-expanded:(p1, p2, p3, s * q1 * q2)
+            self._C_p1_left_at_q1_left_q2_center = self._convert_to_p_expanded(self._C_p1_left_at_q1_left_q2_center)
+            self._C_p2_bot_at_q1_left_q2_center  = self._convert_to_p_expanded(self._C_p2_bot_at_q1_left_q2_center)
+            self._C_p3_back_at_q1_left_q2_center = self._convert_to_p_expanded(self._C_p3_back_at_q1_left_q2_center)
 
-            self._C_p1_right = self._convert_to_p_expanded(self._C_p1_right)
-            self._C_p2_right = self._convert_to_p_expanded(self._C_p2_right)
-            self._C_p3_right = self._convert_to_p_expanded(self._C_p3_right)
+            self._C_p1_left_at_q1_center_q2_bot = self._convert_to_p_expanded(self._C_p1_left_at_q1_center_q2_bot)
+            self._C_p2_bot_at_q1_center_q2_bot  = self._convert_to_p_expanded(self._C_p2_bot_at_q1_center_q2_bot)
+            self._C_p3_back_at_q1_center_q2_bot = self._convert_to_p_expanded(self._C_p3_back_at_q1_center_q2_bot)
 
-            self._C_p1_bot = self._convert_to_p_expanded(self._C_p1_bot)
-            self._C_p2_bot = self._convert_to_p_expanded(self._C_p2_bot)
-            self._C_p3_bot = self._convert_to_p_expanded(self._C_p3_bot)
-
-            self._C_p1_top = self._convert_to_p_expanded(self._C_p1_top)
-            self._C_p2_top = self._convert_to_p_expanded(self._C_p2_top)
-            self._C_p3_top = self._convert_to_p_expanded(self._C_p3_top)
-
-            f_left  = self._convert_to_p_expanded(f_left)
-            f_right = self._convert_to_p_expanded(f_right)
-            f_bot   = self._convert_to_p_expanded(f_bot)
-            f_top   = self._convert_to_p_expanded(f_top)
-
-            # NOTE: below fx_{...}, uses x to refer to the f used in q-space:
-            # x = l --> left  in q-space (i,     j+1/2)
-            # x = r --> right in q-space (i+1,   j+1/2)
-            # x = b --> bot   in q-space (i+1/2, j    )
-            # x = t --> top   in q-space (i+1/2, j+1  )
-            # Variation of p1 is along axis 0:
-            fl_left_plus_eps, fl_right_minus_eps = reconstruct(self, f_left, 0, reconstruction_in_p)
-            # Variation of p2 is along axis 1:
-            fl_bot_plus_eps, fl_top_minus_eps    = reconstruct(self, f_left, 1, reconstruction_in_p)
-            # Variation of p3 is along axis 2:
-            fl_back_plus_eps, fl_front_minus_eps = reconstruct(self, f_left, 2, reconstruction_in_p)
+            f_q1_left_q2_center  = self._convert_to_p_expanded(f_q1_left_q2_center)
+            f_q1_center_q2_bot   = self._convert_to_p_expanded(f_q1_center_q2_bot)
 
             # Variation of p1 is along axis 0:
-            fr_left_plus_eps, fr_right_minus_eps = reconstruct(self, f_right, 0, reconstruction_in_p)
+            f_p1_left_plus_eps_at_q1_left_q2_center, f_p1_right_minus_eps_at_q1_left_q2_center \
+            = reconstruct(self, f_q1_left_q2_center, 0, reconstruction_in_p)
             # Variation of p2 is along axis 1:
-            fr_bot_plus_eps, fr_top_minus_eps    = reconstruct(self, f_right, 1, reconstruction_in_p)
+            f_p2_bot_plus_eps_at_q1_left_q2_center, f_p2_top_minus_eps_at_q1_left_q2_center \
+            = reconstruct(self, f_q1_left_q2_center, 1, reconstruction_in_p)
             # Variation of p3 is along axis 2:
-            fr_back_plus_eps, fr_front_minus_eps = reconstruct(self, f_right, 2, reconstruction_in_p)
+            f_p3_back_plus_eps_at_q1_left_q2_center, f_p3_front_minus_eps_at_q1_left_q2_center \
+            = reconstruct(self, f_q1_left_q2_center, 2, reconstruction_in_p)
 
-            # Variation of p1 is along axis 0:
-            fb_left_plus_eps, fb_right_minus_eps = reconstruct(self, f_bot, 0, reconstruction_in_p)
-            # Variation of p2 is along axis 1:
-            fb_bot_plus_eps, fb_top_minus_eps    = reconstruct(self, f_bot, 1, reconstruction_in_p)
-            # Variation of p3 is along axis 2:
-            fb_back_plus_eps, fb_front_minus_eps = reconstruct(self, f_bot, 2, reconstruction_in_p)
+            # f_left_minus_eps of i-th cell is f_right_minus_eps of the (i-1)th cell
+            f_p1_left_minus_eps_at_q1_left_q2_center = af.shift(f_p1_right_minus_eps_at_q1_left_q2_center, 1)
+            # Extending the same to bot:
+            f_p2_bot_minus_eps_at_q1_left_q2_center  = af.shift(f_p2_top_minus_eps_at_q1_left_q2_center, 0, 1)
+            # Extending the same to back:
+            f_p3_back_minus_eps_at_q1_left_q2_center = af.shift(f_p3_front_minus_eps_at_q1_left_q2_center, 0, 0, 1)
 
-            # Variation of p1 is along axis 0:
-            ft_left_plus_eps, ft_right_minus_eps = reconstruct(self, f_top, 0, reconstruction_in_p)
-            # Variation of p2 is along axis 1:
-            ft_bot_plus_eps, ft_top_minus_eps    = reconstruct(self, f_top, 1, reconstruction_in_p)
-            # Variation of p3 is along axis 2:
-            ft_back_plus_eps, ft_front_minus_eps = reconstruct(self, f_top, 2, reconstruction_in_p)
+            f_p1_left_at_q1_left_q2_center = riemann_solver(self, f_p1_left_minus_eps_at_q1_left_q2_center, 
+                                                            f_p1_left_plus_eps_at_q1_left_q2_center, 
+                                                            self._C_p1_left_at_q1_left_q2_center
+                                                           )
+
+            f_p2_bot_at_q1_left_q2_center  = riemann_solver(self, f_p2_bot_minus_eps_at_q1_left_q2_center, 
+                                                            f_p2_bot_plus_eps_at_q1_left_q2_center, 
+                                                            self._C_p2_bot_at_q1_left_q2_center
+                                                           )
             
-            # f_left_minus_eps of i-th cell is f_right_minus_eps of the (i-1)th cell
-            fl_left_minus_eps = af.shift(fl_right_minus_eps, 1)
-            # Extending the same to bot:
-            fl_bot_minus_eps  = af.shift(fl_top_minus_eps, 0, 1)
-            # Extending the same to back:
-            fl_back_minus_eps = af.shift(fl_front_minus_eps, 0, 0, 1)
+            f_p3_back_at_q1_left_q2_center = riemann_solver(self, f_p3_back_minus_eps_at_q1_left_q2_center, 
+                                                            f_p3_back_plus_eps_at_q1_left_q2_center, 
+                                                            self._C_p3_back_at_q1_left_q2_center
+                                                           )
+
+            # Variation of p1 is along axis 0:
+            f_p1_left_plus_eps_at_q1_center_q2_bot, f_p1_right_minus_eps_at_q1_center_q2_bot \
+            = reconstruct(self, f_q1_center_q2_bot, 0, reconstruction_in_p)
+            # Variation of p2 is along axis 1:
+            f_p2_bot_plus_eps_at_q1_center_q2_bot, f_p2_top_minus_eps_at_q1_center_q2_bot \
+            = reconstruct(self, f_q1_center_q2_bot, 1, reconstruction_in_p)
+            # Variation of p3 is along axis 2:
+            f_p3_back_plus_eps_at_q1_center_q2_bot, f_p3_front_minus_eps_at_q1_center_q2_bot \
+            = reconstruct(self, f_q1_center_q2_bot, 2, reconstruction_in_p)
 
             # f_left_minus_eps of i-th cell is f_right_minus_eps of the (i-1)th cell
-            fr_left_minus_eps = af.shift(fr_right_minus_eps, 1)
+            f_p1_left_minus_eps_at_q1_center_q2_bot = af.shift(f_p1_right_minus_eps_at_q1_center_q2_bot, 1)
             # Extending the same to bot:
-            fr_bot_minus_eps  = af.shift(fr_top_minus_eps, 0, 1)
+            f_p2_bot_minus_eps_at_q1_center_q2_bot  = af.shift(f_p2_top_minus_eps_at_q1_center_q2_bot, 0, 1)
             # Extending the same to back:
-            fr_back_minus_eps = af.shift(fr_front_minus_eps, 0, 0, 1)
+            f_p3_back_minus_eps_at_q1_center_q2_bot = af.shift(f_p3_front_minus_eps_at_q1_center_q2_bot, 0, 0, 1)
 
-            # f_left_minus_eps of i-th cell is f_right_minus_eps of the (i-1)th cell
-            fb_left_minus_eps = af.shift(fb_right_minus_eps, 1)
-            # Extending the same to bot:
-            fb_bot_minus_eps  = af.shift(fb_top_minus_eps, 0, 1)
-            # Extending the same to back:
-            fb_back_minus_eps = af.shift(fb_front_minus_eps, 0, 0, 1)
+            f_p1_left_at_q1_center_q2_bot = riemann_solver(self, f_p1_left_minus_eps_at_q1_center_q2_bot, 
+                                                           f_p1_left_plus_eps_at_q1_center_q2_bot, 
+                                                           self._C_p1_left_at_q1_center_q2_bot
+                                                          )
 
-            # f_left_minus_eps of i-th cell is f_right_minus_eps of the (i-1)th cell
-            ft_left_minus_eps = af.shift(ft_right_minus_eps, 1)
-            # Extending the same to bot:
-            ft_bot_minus_eps  = af.shift(ft_top_minus_eps, 0, 1)
-            # Extending the same to back:
-            ft_back_minus_eps = af.shift(ft_front_minus_eps, 0, 0, 1)
+            f_p2_bot_at_q1_center_q2_bot  = riemann_solver(self, f_p2_bot_minus_eps_at_q1_center_q2_bot, 
+                                                           f_p2_bot_plus_eps_at_q1_center_q2_bot, 
+                                                           self._C_p2_bot_at_q1_center_q2_bot
+                                                          )
+            
+            f_p3_back_at_q1_center_q2_bot = riemann_solver(self, f_p3_back_minus_eps_at_q1_center_q2_bot, 
+                                                           f_p3_back_plus_eps_at_q1_center_q2_bot, 
+                                                           self._C_p3_back_at_q1_center_q2_bot
+                                                          )
 
-            fl_left_p1 = riemann_solver(self, fl_left_minus_eps, fl_left_plus_eps, self._C_p1_left)
-            fl_bot_p2  = riemann_solver(self, fl_bot_minus_eps, fl_bot_plus_eps, self._C_p2_left)
-            fl_back_p3 = riemann_solver(self, fl_back_minus_eps, fl_back_plus_eps, self._C_p3_left)
+            # For flux along p1 at q1_left_q2_center:
+            flux_p1_left_at_q1_left_q2_center \
+            = multiply(self._C_p1_left_at_q1_left_q2_center, f_p1_left_at_q1_left_q2_center)
 
-            fr_left_p1 = riemann_solver(self, fr_left_minus_eps, fr_left_plus_eps, self._C_p1_right)
-            fr_bot_p2  = riemann_solver(self, fr_bot_minus_eps, fr_bot_plus_eps, self._C_p2_right)
-            fr_back_p3 = riemann_solver(self, fr_back_minus_eps, fr_back_plus_eps, self._C_p3_right)
+            flux_p1_right_at_q1_left_q2_center \
+            = af.shift(flux_p1_left_at_q1_left_q2_center, -1)
 
-            fb_left_p1 = riemann_solver(self, fb_left_minus_eps, fb_left_plus_eps, self._C_p1_bot)
-            fb_bot_p2  = riemann_solver(self, fb_bot_minus_eps, fb_bot_plus_eps, self._C_p2_bot)
-            fb_back_p3 = riemann_solver(self, fb_back_minus_eps, fb_back_plus_eps, self._C_p3_bot)
+            d_flux_p1_at_q1_left_q2_center_dp1 = multiply(  flux_p1_right_at_q1_left_q2_center \
+                                                          - flux_p1_left_at_q1_left_q2_center,
+                                                            1 / self.dp1
+                                                         )    
 
-            ft_left_p1 = riemann_solver(self, ft_left_minus_eps, ft_left_plus_eps, self._C_p1_top)
-            ft_bot_p2  = riemann_solver(self, ft_bot_minus_eps, ft_bot_plus_eps, self._C_p2_top)
-            ft_back_p3 = riemann_solver(self, ft_back_minus_eps, ft_back_plus_eps, self._C_p3_top)
-        
-            left_flux_p1 = 0.25 * (  multiply(self._C_p1_left, fl_left_p1) + multiply(self._C_p1_right, fr_left_p1)
-                                   + multiply(self._C_p1_bot, fb_left_p1)  + multiply(self._C_p1_top, ft_left_p1)
-                                  ) 
-            bot_flux_p2  = 0.25 * (  multiply(self._C_p2_left, fl_bot_p2) + multiply(self._C_p2_right, fr_bot_p2)
-                                    + multiply(self._C_p2_bot, fb_bot_p2) + multiply(self._C_p2_top, ft_bot_p2)
-                                  ) 
-            back_flux_p3 = 0.25 * (  multiply(self._C_p3_left, fl_back_p3) + multiply(self._C_p3_right, fr_back_p3)
-                                   + multiply(self._C_p3_bot, fb_back_p3)  + multiply(self._C_p3_top, ft_back_p3)
-                                  ) 
+            # For flux along p2 at q1_left_q2_center:
+            flux_p2_bot_at_q1_left_q2_center \
+            = multiply(self._C_p2_bot_at_q1_left_q2_center, f_p2_bot_at_q1_left_q2_center)
 
-        right_flux_p1 = af.shift(left_flux_p1, -1)
-        top_flux_p2   = af.shift(bot_flux_p2,   0, -1)
-        front_flux_p3 = af.shift(back_flux_p3,  0,  0, -1)
+            flux_p2_top_at_q1_left_q2_center \
+            = af.shift(flux_p2_bot_at_q1_left_q2_center, 0, -1)
 
-        left_flux_p1  = self._convert_to_q_expanded(left_flux_p1)
-        right_flux_p1 = self._convert_to_q_expanded(right_flux_p1)
+            d_flux_p2_at_q1_left_q2_center_dp2 = multiply(  flux_p2_top_at_q1_left_q2_center \
+                                                          - flux_p2_bot_at_q1_left_q2_center,
+                                                            1 / self.dp2
+                                                         )    
 
-        bot_flux_p2 = self._convert_to_q_expanded(bot_flux_p2)
-        top_flux_p2 = self._convert_to_q_expanded(top_flux_p2)
+            # For flux along p3 at q1_left_q2_center:
+            flux_p3_back_at_q1_left_q2_center \
+            = multiply(self._C_p3_back_at_q1_left_q2_center, f_p3_back_at_q1_left_q2_center)
 
-        back_flux_p3  = self._convert_to_q_expanded(back_flux_p3)
-        front_flux_p3 = self._convert_to_q_expanded(front_flux_p3)
+            flux_p3_front_at_q1_left_q2_center \
+            = af.shift(flux_p3_back_at_q1_left_q2_center, 0, 0, -1)
 
-        d_flux_p1_dp1 = multiply((right_flux_p1 - left_flux_p1), 1 / self.dp1)
-        d_flux_p2_dp2 = multiply((top_flux_p2   - bot_flux_p2 ), 1 / self.dp2)
-        d_flux_p3_dp3 = multiply((front_flux_p3 - back_flux_p3), 1 / self.dp3)
+            d_flux_p3_at_q1_left_q2_center_dp3 = multiply(  flux_p3_front_at_q1_left_q2_center \
+                                                          - flux_p3_back_at_q1_left_q2_center,
+                                                            1 / self.dp3
+                                                         )    
 
-        df_dt += -(d_flux_p1_dp1 + d_flux_p2_dp2 + d_flux_p3_dp3)
+            # For flux along p1 at q1_center_q2_bot:
+            flux_p1_left_at_q1_center_q2_bot \
+            = multiply(self._C_p1_left_at_q1_center_q2_bot, f_p1_left_at_q1_center_q2_bot)
+
+            flux_p1_right_at_q1_center_q2_bot \
+            = af.shift(flux_p1_left_at_q1_center_q2_bot, -1)
+
+            d_flux_p1_at_q1_center_q2_bot_dp1 = multiply(  flux_p1_right_at_q1_center_q2_bot \
+                                                         - flux_p1_left_at_q1_center_q2_bot,
+                                                           1 / self.dp1
+                                                        )    
+
+            # For flux along p2 at q1_center_q2_bot:
+            flux_p2_bot_at_q1_center_q2_bot \
+            = multiply(self._C_p2_bot_at_q1_center_q2_bot, f_p2_bot_at_q1_center_q2_bot)
+
+            flux_p2_top_at_q1_center_q2_bot \
+            = af.shift(flux_p2_bot_at_q1_center_q2_bot, 0, -1)
+
+            d_flux_p2_at_q1_center_q2_bot_dp2 = multiply(  flux_p2_top_at_q1_center_q2_bot \
+                                                         - flux_p2_bot_at_q1_center_q2_bot,
+                                                           1 / self.dp2
+                                                        )    
+
+            # For flux along p3 at q1_center_q2_bot:
+            flux_p3_back_at_q1_center_q2_bot \
+            = multiply(self._C_p3_back_at_q1_center_q2_bot, f_p3_back_at_q1_center_q2_bot)
+
+            flux_p3_front_at_q1_center_q2_bot \
+            = af.shift(flux_p3_back_at_q1_center_q2_bot, 0, 0, -1)
+
+            d_flux_p3_at_q1_center_q2_bot_dp3 = multiply(  flux_p3_front_at_q1_center_q2_bot \
+                                                         - flux_p3_back_at_q1_center_q2_bot,
+                                                           1 / self.dp3
+                                                        )    
+
+            d_flux_p1_at_q1_left_q2_center_dp1 = self._convert_to_q_expanded(d_flux_p1_at_q1_left_q2_center_dp1)
+            d_flux_p2_at_q1_left_q2_center_dp2 = self._convert_to_q_expanded(d_flux_p2_at_q1_left_q2_center_dp2)
+            d_flux_p3_at_q1_left_q2_center_dp3 = self._convert_to_q_expanded(d_flux_p3_at_q1_left_q2_center_dp3)
+
+            d_flux_p1_at_q1_right_q2_center_dp1 = af.shift(d_flux_p1_at_q1_left_q2_center_dp1, 0, 0, -1)
+            d_flux_p2_at_q1_right_q2_center_dp2 = af.shift(d_flux_p2_at_q1_left_q2_center_dp2, 0, 0, -1)
+            d_flux_p3_at_q1_right_q2_center_dp3 = af.shift(d_flux_p3_at_q1_left_q2_center_dp3, 0, 0, -1)
+
+            d_flux_p1_at_q1_center_q2_bot_dp1 = self._convert_to_q_expanded(d_flux_p1_at_q1_center_q2_bot_dp1)
+            d_flux_p2_at_q1_center_q2_bot_dp2 = self._convert_to_q_expanded(d_flux_p2_at_q1_center_q2_bot_dp2)
+            d_flux_p3_at_q1_center_q2_bot_dp3 = self._convert_to_q_expanded(d_flux_p3_at_q1_center_q2_bot_dp3)
+
+            d_flux_p1_at_q1_center_q2_top_dp1 = af.shift(d_flux_p1_at_q1_center_q2_bot_dp1, 0, 0, 0, -1)
+            d_flux_p2_at_q1_center_q2_top_dp2 = af.shift(d_flux_p2_at_q1_center_q2_bot_dp2, 0, 0, 0, -1)
+            d_flux_p3_at_q1_center_q2_top_dp3 = af.shift(d_flux_p3_at_q1_center_q2_bot_dp3, 0, 0, 0, -1)
+
+            d_flux_p1_dp1 = 0.25 * (  d_flux_p1_at_q1_left_q2_center_dp1 
+                                    + d_flux_p1_at_q1_right_q2_center_dp1
+                                    + d_flux_p1_at_q1_center_q2_bot_dp1
+                                    + d_flux_p1_at_q1_center_q2_top_dp1
+                                   )
+
+            d_flux_p2_dp2 = 0.25 * (  d_flux_p2_at_q1_left_q2_center_dp2 
+                                    + d_flux_p2_at_q1_right_q2_center_dp2
+                                    + d_flux_p2_at_q1_center_q2_bot_dp2
+                                    + d_flux_p2_at_q1_center_q2_top_dp2
+                                   )
+
+            d_flux_p3_dp3 = 0.25 * (  d_flux_p3_at_q1_left_q2_center_dp3 
+                                    + d_flux_p3_at_q1_right_q2_center_dp3
+                                    + d_flux_p3_at_q1_center_q2_bot_dp3
+                                    + d_flux_p3_at_q1_center_q2_top_dp3
+                                   )
+
+            df_dt += -(d_flux_p1_dp1 + d_flux_p2_dp2 + d_flux_p3_dp3)
 
     if(term_to_return == 'd_flux_p1_dp1'):
         af.eval(d_flux_p1_dp1)
