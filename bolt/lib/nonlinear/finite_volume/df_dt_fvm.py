@@ -358,7 +358,6 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
                            self.fields_solver, self.physical_system.params
                           )[2]
 
-
             # Alternating upon each call:
             self.fields_solver.at_n = not(self.fields_solver.at_n)
 
@@ -414,10 +413,12 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
             flux_p1_right_at_q1_left_q2_center \
             = af.shift(flux_p1_left_at_q1_left_q2_center, -1)
 
-            d_flux_p1_at_q1_left_q2_center_dp1 = multiply(  flux_p1_right_at_q1_left_q2_center \
-                                                          - flux_p1_left_at_q1_left_q2_center,
-                                                            1 / self.dp1
-                                                         )    
+            d_flux_p1_at_q1_left_q2_center_dp1 \
+            = multiply(self._convert_to_q_expanded(  flux_p1_right_at_q1_left_q2_center \
+                                                   - flux_p1_left_at_q1_left_q2_center
+                                                  ),
+                       1 / self.dp1
+                      )    
 
             # For flux along p2 at q1_center_q2_bot:
             flux_p2_bot_at_q1_center_q2_bot \
@@ -426,10 +427,12 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
             flux_p2_top_at_q1_center_q2_bot \
             = af.shift(flux_p2_bot_at_q1_center_q2_bot, 0, -1)
 
-            d_flux_p2_at_q1_center_q2_bot_dp2 = multiply(  flux_p2_top_at_q1_center_q2_bot \
-                                                         - flux_p2_bot_at_q1_center_q2_bot,
-                                                           1 / self.dp2
-                                                        )    
+            d_flux_p2_at_q1_center_q2_bot_dp2 \
+            = multiply(self._convert_to_q_expanded(  flux_p2_top_at_q1_center_q2_bot \
+                                                   - flux_p2_bot_at_q1_center_q2_bot
+                                                  ),
+                       1 / self.dp2
+                      )    
 
             # For flux along p3 at q1_center_q2_center:
             flux_p3_back_at_q1_center_q2_center \
@@ -438,18 +441,16 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
             flux_p3_front_at_q1_center_q2_center \
             = af.shift(flux_p3_back_at_q1_center_q2_center,  0,  0, -1)
 
-            d_flux_p3_at_q1_center_q2_center_dp3 = multiply(  flux_p3_front_at_q1_center_q2_center \
-                                                            - flux_p3_back_at_q1_center_q2_center,
-                                                              1 / self.dp3
-                                                           )
+            d_flux_p3_at_q1_center_q2_center_dp3 \
+            = multiply(self._convert_to_q_expanded(  flux_p3_front_at_q1_center_q2_center \
+                                                   - flux_p3_back_at_q1_center_q2_center
+                                                  ),
+                       1 / self.dp3
+                      )
 
-            d_flux_p1_at_q1_left_q2_center_dp1  = self._convert_to_q_expanded(d_flux_p1_at_q1_left_q2_center_dp1)
             d_flux_p1_at_q1_right_q2_center_dp1 = af.shift(d_flux_p1_at_q1_left_q2_center_dp1, 0, 0, -1)
+            d_flux_p2_at_q1_center_q2_top_dp2   = af.shift(d_flux_p2_at_q1_center_q2_bot_dp2, 0, 0, 0, -1)
 
-            d_flux_p2_at_q1_center_q2_bot_dp2 = self._convert_to_q_expanded(d_flux_p2_at_q1_center_q2_bot_dp2)
-            d_flux_p2_at_q1_center_q2_top_dp2 = af.shift(d_flux_p2_at_q1_center_q2_bot_dp2, 0, 0, 0, -1)
-
-            d_flux_p3_at_q1_center_q2_center_dp3 = self._convert_to_q_expanded(d_flux_p3_at_q1_center_q2_center_dp3)
 
             d_flux_p1_dp1 = 0.5 * (  d_flux_p1_at_q1_left_q2_center_dp1 
                                    + d_flux_p1_at_q1_right_q2_center_dp1
