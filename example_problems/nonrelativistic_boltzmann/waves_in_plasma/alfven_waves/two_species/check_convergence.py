@@ -135,7 +135,7 @@ def B3_analytic(q1, t):
 
     return(B3_analytic)
 
-N = np.array([32, 48, 64, 80, 96, 112, 128, 144, 160])
+N = 32 + 16 * np.arange(4)
 
 error_v2e = np.zeros(N.size)
 error_v3e = np.zeros(N.size)

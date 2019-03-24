@@ -16,7 +16,7 @@ import bolt.src.nonrelativistic_boltzmann.advection_terms as advection_terms
 import bolt.src.nonrelativistic_boltzmann.collision_operator as collision_operator
 import bolt.src.nonrelativistic_boltzmann.moments as moments
 
-N = np.array([144])
+N = 32 + 16 * np.arange(9)
 
 for i in range(N.size):
 
