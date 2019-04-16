@@ -55,7 +55,13 @@ class fields_solver(object):
         rho_by_eps     = rho / self.params.eps
         rho_b          = af.mean(rho_by_eps) # background
         divE           = self.compute_divE()
-        mean_gauss_law = af.mean(af.abs((divE- rho_by_eps + rho_b)[:, :, N_g:-N_g, N_g:-N_g]))
+        mean_gauss_law = af.mean(af.abs((divE - rho_by_eps + rho_b)[:, :, N_g:-N_g, N_g:-N_g]))
+
+        # import pylab as pl 
+        # pl.plot(af.flat((rho_by_eps - rho_b)[:, :, N_g:-N_g, 0]))
+        # pl.plot(af.flat((divE)[:, :, N_g:-N_g, 0]))
+        # pl.show()
+
         PETSc.Sys.Print('MEAN(|divE-rho|) =', mean_gauss_law)
         # Appropriately raising exceptions:
         # Checking for ∇.B = 0

@@ -329,6 +329,13 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
             d_flux_p3_dp3 = multiply((front_flux_p3 - back_flux_p3), 1 / self.dp3)
 
             df_dt += -(d_flux_p1_dp1 + d_flux_p2_dp2 + d_flux_p3_dp3)
+            
+            # print(af.sum(multiply(d_flux_p1_dp1, self.p1_center**2)))
+            # J1 = multiply(self.physical_system.params.charge,
+            #               self.compute_moments('mom_v1_bulk', f = self._convert_to_q_expanded(f))
+            #              ) # (i + 1/2, j + 1/2)
+
+            # print(2 * af.sum(self.fields_solver.yee_grid_EM_fields_at_n_plus_half[0] * J1))
 
         else:
 
@@ -462,8 +469,19 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
 
             d_flux_p3_dp3 = d_flux_p3_at_q1_center_q2_center_dp3
 
-            df_dt += -(d_flux_p1_dp1 + d_flux_p2_dp2 + d_flux_p3_dp3)
+            # \int 0.5 * |v|^2 * F * df/dv
+            print(af.sum(self.compute_moments('energy', f = self._convert_to_q_expanded(d_flux_p1_at_q1_left_q2_center_dp1))))
+            J1 = multiply(self.physical_system.params.charge,
+                          self.compute_moments('mom_v1_bulk', f = self._convert_to_q_expanded(f_q1_left_q2_center))
+                         ) # (i, j + 1/2)
 
+            E1, E2, E3, B1, B2, B3 = self.fields_solver.get_fields('left_center')
+            # -J.E
+            print(-af.sum(E1 * J1))
+            print(abs(-af.sum(E1 * J1) - af.sum(self.compute_moments('energy', f = self._convert_to_q_expanded(d_flux_p1_at_q1_left_q2_center_dp1)))))
+
+            df_dt += -(d_flux_p1_dp1 + d_flux_p2_dp2 + d_flux_p3_dp3)
+            
     if(term_to_return == 'd_flux_p1_dp1'):
         af.eval(d_flux_p1_dp1)
         return(d_flux_p1_dp1)
