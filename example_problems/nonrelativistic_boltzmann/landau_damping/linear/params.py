@@ -7,7 +7,7 @@ import bolt.src.nonrelativistic_boltzmann.units.velocity_scales as velocity_scal
 
 # Can be defined as 'electrostatic', 'user-defined', 'electrodynamic'.
 fields_type       = 'electrodynamic'
-fields_initialize = 'fft'
+fields_initialize = 'user-defined'
 fields_solver     = 'fdtd'
 
 # Method in q-space
@@ -66,7 +66,7 @@ alpha = 0.0001
 
 # Time parameters:
 N_cfl   = 0.9
-t_final = 5.0
+t_final = 1.0
 
 # Switch for solver components:
 fields_enabled           = True
