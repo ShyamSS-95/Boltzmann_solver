@@ -92,6 +92,7 @@ for time_index, t0 in enumerate(time_array[1:]):
     # E_data_ls[time_index + 1] = af.max(E1_ls)
 
     nls.dump_moments('dump_moments/t=' + '%.3f'%t0)
+    nls.dump_moments('dump_moments2/t=' + '%.3f'%t0, 'left_center')
     nls.dump_EM_fields('dump_fields/t=' + '%.3f'%t0)
 
 nls.dump_distribution_function('data_f')

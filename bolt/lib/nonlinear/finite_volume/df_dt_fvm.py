@@ -30,6 +30,37 @@ d(f_{i+1/2, j+1/2})/dt  = ((- (C_q1 * f)_{i + 1, j + 1/2} + (C_q1 * f)_{i, j + 1
 The same concept is extended to p-space as well.                          
 """
 
+def get_f_cell_edges_q(f, self):
+
+    # Giving shorter name reference:
+    reconstruction_in_q = self.physical_system.params.reconstruction_method_in_q
+
+    f_left_plus_eps, f_right_minus_eps = reconstruct(self, f, 2, reconstruction_in_q)
+    f_bot_plus_eps, f_top_minus_eps    = reconstruct(self, f, 3, reconstruction_in_q)
+
+    # f_left_minus_eps of i-th cell is f_right_minus_eps of the (i-1)th cell
+    f_left_minus_eps = af.shift(f_right_minus_eps, 0, 0, 1)
+    # Extending the same to bot:
+    f_bot_minus_eps  = af.shift(f_top_minus_eps,   0, 0, 0, 1)
+
+    # af.broadcast used to perform batched operations on arrays of different sizes:
+    self._C_q1 = af.broadcast(self._C_q, self.time_elapsed, 
+                              self.q1_left_center, self.q2_left_center,
+                              self.p1_center, self.p2_center, self.p3_center,
+                              self.physical_system.params
+                             )[0]
+
+    self._C_q2 = af.broadcast(self._C_q, self.time_elapsed, 
+                              self.q1_center_bot, self.q2_center_bot,
+                              self.p1_center, self.p2_center, self.p3_center,
+                              self.physical_system.params
+                             )[1]
+
+    self.f_q1_left_q2_center = riemann_solver(self, f_left_minus_eps, f_left_plus_eps, self._C_q1)
+    self.f_q1_center_q2_bot  = riemann_solver(self, f_bot_minus_eps, f_bot_plus_eps, self._C_q2)
+
+    return
+
 def df_dt_fvm(f, self, term_to_return = 'all'):
     """
     Returns the expression for df/dt which is then 
@@ -43,44 +74,18 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
         be evaluated.
     """ 
     
-    # Giving shorter name references:
-    reconstruction_in_q = self.physical_system.params.reconstruction_method_in_q
+    # Giving shorter name reference:
     reconstruction_in_p = self.physical_system.params.reconstruction_method_in_p
-    
-    riemann_in_q = self.physical_system.params.riemann_solver_in_q
-    riemann_in_p = self.physical_system.params.riemann_solver_in_p
 
     # Initializing df_dt
     df_dt = 0
 
     if(self.physical_system.params.solver_method_in_q == 'FVM'):
 
-        f_left_plus_eps, f_right_minus_eps = reconstruct(self, f, 2, reconstruction_in_q)
-        f_bot_plus_eps, f_top_minus_eps    = reconstruct(self, f, 3, reconstruction_in_q)
+        get_f_cell_edges_q(f, self)
 
-        # f_left_minus_eps of i-th cell is f_right_minus_eps of the (i-1)th cell
-        f_left_minus_eps = af.shift(f_right_minus_eps, 0, 0, 1)
-        # Extending the same to bot:
-        f_bot_minus_eps  = af.shift(f_top_minus_eps,   0, 0, 0, 1)
-
-        # af.broadcast used to perform batched operations on arrays of different sizes:
-        self._C_q1 = af.broadcast(self._C_q, self.time_elapsed, 
-                                  self.q1_left_center, self.q2_left_center,
-                                  self.p1_center, self.p2_center, self.p3_center,
-                                  self.physical_system.params
-                                 )[0]
-
-        self._C_q2 = af.broadcast(self._C_q, self.time_elapsed, 
-                                  self.q1_center_bot, self.q2_center_bot,
-                                  self.p1_center, self.p2_center, self.p3_center,
-                                  self.physical_system.params
-                                 )[1]
-
-        f_q1_left_q2_center  = riemann_solver(self, f_left_minus_eps, f_left_plus_eps, self._C_q1)
-        f_q1_center_q2_bot   = riemann_solver(self, f_bot_minus_eps, f_bot_plus_eps, self._C_q2)
-
-        left_flux = multiply(self._C_q1, f_q1_left_q2_center)
-        bot_flux  = multiply(self._C_q2, f_q1_center_q2_bot)
+        left_flux = multiply(self._C_q1, self.f_q1_left_q2_center)
+        bot_flux  = multiply(self._C_q2, self.f_q1_center_q2_bot)
 
         right_flux = af.shift(left_flux, 0, 0, -1)
         top_flux   = af.shift(bot_flux,  0, 0,  0, -1)
@@ -213,11 +218,11 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
             else:
 
                 J1 = multiply(self.physical_system.params.charge,
-                              self.compute_moments('mom_v1_bulk', f = f_q1_left_q2_center)
+                              self.compute_moments('mom_v1_bulk', f = self.f_q1_left_q2_center)
                              ) # (i, j + 1/2)
 
                 J2 = multiply(self.physical_system.params.charge,
-                              self.compute_moments('mom_v2_bulk', f = f_q1_center_q2_bot)
+                              self.compute_moments('mom_v2_bulk', f = self.f_q1_center_q2_bot)
                              ) # (i + 1/2, j)
 
                 J3 = multiply(self.physical_system.params.charge, 
@@ -373,13 +378,13 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
             self._C_p2_bot_at_q1_center_q2_bot     = self._convert_to_p_expanded(self._C_p2_bot_at_q1_center_q2_bot)
             self._C_p3_back_at_q1_center_q2_center = self._convert_to_p_expanded(self._C_p3_back_at_q1_center_q2_center)
 
-            f_q1_left_q2_center   = self._convert_to_p_expanded(f_q1_left_q2_center)
-            f_q1_center_q2_bot    = self._convert_to_p_expanded(f_q1_center_q2_bot)
+            self.f_q1_left_q2_center   = self._convert_to_p_expanded(self.f_q1_left_q2_center)
+            self.f_q1_center_q2_bot    = self._convert_to_p_expanded(self.f_q1_center_q2_bot)
             f_q1_center_q2_center = self._convert_to_p_expanded(f)
 
             # Variation of p1 is along axis 0:
             f_p1_left_plus_eps_at_q1_left_q2_center, f_p1_right_minus_eps_at_q1_left_q2_center \
-            = reconstruct(self, f_q1_left_q2_center, 0, reconstruction_in_p)
+            = reconstruct(self, self.f_q1_left_q2_center, 0, reconstruction_in_p)
 
             # f_left_minus_eps of i-th cell is f_right_minus_eps of the (i-1)th cell
             f_p1_left_minus_eps_at_q1_left_q2_center = af.shift(f_p1_right_minus_eps_at_q1_left_q2_center, 1)
@@ -391,7 +396,7 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
 
             # Variation of p2 is along axis 1:
             f_p2_bot_plus_eps_at_q1_center_q2_bot, f_p2_top_minus_eps_at_q1_center_q2_bot \
-            = reconstruct(self, f_q1_center_q2_bot, 1, reconstruction_in_p)
+            = reconstruct(self, self.f_q1_center_q2_bot, 1, reconstruction_in_p)
 
             # f_bot_minus_eps of i-th cell is f_top_minus_eps of the (i-1)th cell
             f_p2_bot_minus_eps_at_q1_center_q2_bot  = af.shift(f_p2_top_minus_eps_at_q1_center_q2_bot, 0, 1)
@@ -469,16 +474,27 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
 
             d_flux_p3_dp3 = d_flux_p3_at_q1_center_q2_center_dp3
 
-            # \int 0.5 * |v|^2 * F * df/dv
-            print(af.sum(self.compute_moments('energy', f = self._convert_to_q_expanded(d_flux_p1_at_q1_left_q2_center_dp1))))
+
             J1 = multiply(self.physical_system.params.charge,
-                          self.compute_moments('mom_v1_bulk', f = self._convert_to_q_expanded(f_q1_left_q2_center))
+                          self.compute_moments('mom_v1_bulk', f = self._convert_to_q_expanded(self.f_q1_left_q2_center))
                          ) # (i, j + 1/2)
 
             E1, E2, E3, B1, B2, B3 = self.fields_solver.get_fields('left_center')
+
+            # import pylab as pl
+            # pl.style.use('latexplot')
+            # pl.plot(af.flat(self.compute_moments('energy', f = self._convert_to_q_expanded(d_flux_p1_at_q1_left_q2_center_dp1))[0, 0, :, 0]), label = r'$\int \frac{eE|v|^2}{2} \frac{\partial f}{\partial v} dv$')
+            # pl.plot(-af.flat((E1 * J1)[0, 0, :, 0]), '--', color = 'black', label = r'$-J \cdot E$')
+            # pl.legend(bbox_to_anchor = (1, 1))
+            # pl.savefig('plot.png', bbox_inches = 'tight')
+            # pl.show()
+
+            # \int 0.5 * |v|^2 * F * df/dv
+            # print(af.sum(self.compute_moments('energy', f = self._convert_to_q_expanded(d_flux_p1_at_q1_left_q2_center_dp1))))
+
             # -J.E
-            print(-af.sum(E1 * J1))
-            print(abs(-af.sum(E1 * J1) - af.sum(self.compute_moments('energy', f = self._convert_to_q_expanded(d_flux_p1_at_q1_left_q2_center_dp1)))))
+            # print(-af.sum(E1 * J1))
+            # print(abs(-af.sum(E1 * J1) - af.sum(self.compute_moments('energy', f = self._convert_to_q_expanded(d_flux_p1_at_q1_left_q2_center_dp1)))))
 
             df_dt += -(d_flux_p1_dp1 + d_flux_p2_dp2 + d_flux_p3_dp3)
             

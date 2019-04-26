@@ -43,6 +43,7 @@ from bolt.lib.utils.bandwidth_test import bandwidth_test
 from bolt.lib.utils.print_with_indent import indent
 from bolt.lib.utils.performance_timings import print_table
 from bolt.lib.utils.broadcasted_primitive_operations import multiply
+from bolt.lib.nonlinear.finite_volume.df_dt_fvm import get_f_cell_edges_q
 
 from bolt.lib.utils.calculate_q import \
     calculate_q_center, calculate_q_left_center, \
@@ -410,6 +411,8 @@ class nonlinear_solver(object):
         # Source/Sink term:
         self._source = physical_system.source
 
+        # Getting f at the cell edges:
+        get_f_cell_edges_q(self.f, self)
 
     def _convert_to_q_expanded(self, array):
         """

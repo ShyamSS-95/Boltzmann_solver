@@ -6,7 +6,7 @@ import numpy as np
 import h5py
 import arrayfire as af
 
-def dump_moments(self, file_name):
+def dump_moments(self, file_name, loc = 'center'):
     """
     This function is used to dump moment variables to a file for later usage.
 
@@ -15,6 +15,10 @@ def dump_moments(self, file_name):
 
     file_name : str
                 The variables will be dumped to this provided file name.
+
+    loc : str
+          The location at which the moments need to be computed.
+          This can be "center", "left_center", "center_bot"
 
     Returns
     -------
@@ -69,6 +73,15 @@ def dump_moments(self, file_name):
     # Removing utility functions:
     if('integral_over_v' in attributes):
         attributes.remove('integral_over_v')
+
+    if(loc == 'center'):
+        f = self.f
+
+    if(loc == 'left_center'):
+        f = self.f_q1_left_q2_center
+
+    if(loc == 'center_bot'):
+        f = self.f_q1_center_q2_bot
 
     for i in range(len(attributes)):
         if(i == 0):
