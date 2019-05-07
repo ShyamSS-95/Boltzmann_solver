@@ -67,10 +67,10 @@ def f0(v1, v2, v3, n, T, v1_bulk, v2_bulk, v3_bulk, params):
     af.eval(f0)
     return (f0)
 
-def BGK(f, t, q1, q2, v1, v2, v3, moments, params, flag = False):
+def source_term_n(f, t, q1, q2, v1, v2, v3, moments, 
+                  fields_solver, params
+                 ):
     """
-    Return BGK operator -(f-f0)/tau.
-
     Parameters:
     -----------
     f : Distribution function array
@@ -93,11 +93,12 @@ def BGK(f, t, q1, q2, v1, v2, v3, moments, params, flag = False):
     v3 : The array that holds data for the v3 dimension in v-space
          shape:(N_v, N_s, 1, 1)
 
+    moments : The compute moments object that can be used to get moment values
+
+    fields_solver : The required EM fields can be obtained from this object
+
     params: The parameters file/object that is originally declared by the user.
             This can be used to inject other functions/attributes into the function
-    
-    flag: Toggle used for evaluating tau = 0 cases need to be evaluated. When set to True, this
-          function is made to return f0, thus setting f = f0 wherever tau = 0
     """
     n = moments('density', f)
     m = params.mass
@@ -118,11 +119,69 @@ def BGK(f, t, q1, q2, v1, v2, v3, moments, params, flag = False):
     f_MB = f0(v1, v2, v3, n, T, v1_bulk, v2_bulk, v3_bulk, params)
     tau  = params.tau(q1, q2, v1, v2, v3)
 
-    if(flag == False):
+    C_f = -(f - f_MB) / tau
 
-        C_f = -(f - f_MB) / tau
-        return(C_f)
+    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields()
 
-    # Accounting for purely collisional cases(f = f0):
-    else:
-        return(f_MB)
+    # Source terms arising from formulation:
+    src_p1 = (e/m) * (E1 + v2 * B3 - v3 * B2) * v1 * f
+    src_p2 = (e/m) * (E2 + v3 * B1 - v1 * B3) * v2 * f
+    src_p3 = (e/m) * (E3 + v1 * B2 - v2 * B1) * v3 * f
+
+    return(C_f + src_p1 + src_p2 + src_p3)
+
+def source_term_n_plus_half(f, t, q1, q2, v1, v2, v3, moments, 
+                            fields_solver, params
+                           ):
+    """
+    Parameters:
+    -----------
+    f : Distribution function array
+        shape:(N_v, N_s, N_q1, N_q2)
+    
+    t : Time elapsed
+    
+    q1 : The array that holds data for the q1 dimension in q-space
+         shape:(1, 1, N_q1, N_q2)
+
+    q2 : The array that holds data for the q2 dimension in q-space
+         shape:(1, 1, N_q1, N_q2)
+
+    v1 : The array that holds data for the v1 dimension in v-space
+         shape:(N_v, N_s, 1, 1)
+
+    v2 : The array that holds data for the v2 dimension in v-space
+         shape:(N_v, N_s, 1, 1)
+
+    v3 : The array that holds data for the v3 dimension in v-space
+         shape:(N_v, N_s, 1, 1)
+
+    moments : The compute moments object that can be used to get moment values
+
+    fields_solver : The required EM fields can be obtained from this object
+
+    params: The parameters file/object that is originally declared by the user.
+            This can be used to inject other functions/attributes into the function
+    """
+    n = moments('density', f)
+    m = params.mass
+
+    # Floor used to avoid 0/0 limit:
+    eps = 1e-30
+
+    v1_bulk = moments('mom_v1_bulk', f) / (n + eps)
+    v2_bulk = moments('mom_v2_bulk', f) / (n + eps)
+    v3_bulk = moments('mom_v3_bulk', f) / (n + eps)
+
+    T = (1 / params.p_dim) * (  2 * multiply(moments('energy', f), m)
+                                  - multiply(n, m) * v1_bulk**2
+                                  - multiply(n, m) * v2_bulk**2
+                                  - multiply(n, m) * v3_bulk**2
+                             ) / (n + eps) + eps
+
+    f_MB = f0(v1, v2, v3, n, T, v1_bulk, v2_bulk, v3_bulk, params)
+    tau  = params.tau(q1, q2, v1, v2, v3)
+
+    C_f = -(f - f_MB) / tau
+
+    return(C_f)

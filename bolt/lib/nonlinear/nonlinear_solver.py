@@ -404,9 +404,13 @@ class nonlinear_solver(object):
 
         # Assigning the function objects to methods of the solver:
         self._A_q = physical_system.A_q
-        self._C_q = physical_system.C_q
         self._A_p = physical_system.A_p
-        self._C_p = physical_system.C_p
+
+        self._C_q_n = physical_system.C_q_n
+        self._C_p_n = physical_system.C_p_n
+        
+        self._C_q_n_plus_half = physical_system.C_q_n_plus_half
+        self._C_p_n_plus_half = physical_system.C_p_n_plus_half
 
         # Source/Sink term:
         self._source = physical_system.source

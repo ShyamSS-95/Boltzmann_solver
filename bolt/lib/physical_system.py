@@ -57,7 +57,7 @@ class physical_system(object):
                          be defined. Simlarly the advection terms for p-space A_p1, 
                          A_p2, C_p1, C_p2 are also defined here.
 
-        source: Function
+        source: File / object
                 Returns the expression that is used on the RHS.
 
         moments: File/object
@@ -85,8 +85,16 @@ class physical_system(object):
                            )
 
         # Checking for type of source_or_sink:
-        if(isinstance(source, types.FunctionType) is False):
-            raise TypeError('Expected source_or_sink to be of type function')
+        # Checking for the types of the methods in advection_term:
+        attributes = [a for a in dir(source) if not a.startswith('_')]
+        for i in range(len(attributes)):
+            if(not(   isinstance(getattr(source, attributes[i]),types.FunctionType)
+                   or isinstance(getattr(source, attributes[i]),types.ModuleType)
+                  )
+              ):
+                raise TypeError('Expected attributes of source \
+                                 to be of type function or module'
+                               )
 
         # Checking for the types of the methods in advection_term:
         attributes = [a for a in dir(advection_term) if not a.startswith('_')]
@@ -199,10 +207,13 @@ class physical_system(object):
         # The following functions return the advection terms 
         # as components of a tuple:
         self.A_q = advection_term.A_q
-        self.C_q = advection_term.C_q
-
         self.A_p = advection_term.A_p
-        self.C_p = advection_term.C_p
+
+        self.C_q_n = advection_term.C_q_n
+        self.C_p_n = advection_term.C_p_n
+
+        self.C_q_n_plus_half = advection_term.C_q_n_plus_half
+        self.C_p_n_plus_half = advection_term.C_p_n_plus_half
 
         # Assigning the function which is used in computing the term on RHS:
         # Usually, this is taken as a relaxation type collision operator

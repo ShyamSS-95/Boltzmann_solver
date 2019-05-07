@@ -30,7 +30,7 @@ d(f_{i+1/2, j+1/2})/dt  = ((- (C_q1 * f)_{i + 1, j + 1/2} + (C_q1 * f)_{i, j + 1
 The same concept is extended to p-space as well.                          
 """
 
-def get_f_cell_edges_q(f, self):
+def get_f_cell_edges_q(f, self, variable):
 
     # Giving shorter name reference:
     reconstruction_in_q = self.physical_system.params.reconstruction_method_in_q

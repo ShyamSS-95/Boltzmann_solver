@@ -61,9 +61,9 @@ def A_q(t, q1, q2, v1, v2, v3, params):
 
 # Conservative Advection terms in q-space:
 # Used by the FVM solver:
-def C_q(t, q1, q2, v1, v2, v3, params):
+def C_q_n(t, q1, q2, v1, v2, v3, params):
     """
-    Return the terms C_q1, C_q2.
+    Return the terms C_q1_n, C_q2_n.
 
     Parameters:
     -----------
@@ -88,9 +88,38 @@ def C_q(t, q1, q2, v1, v2, v3, params):
             This can be used to inject other functions/attributes into the function
 
     """
-    # C_q1[:, :N_s] = v1
-    # C_q2[:, :N_s] = v2
+    C_q1 = v1**3 / 2
+    C_q2 = v2**3 / 2
+
+    return (C_q1, C_q2)
+
+def C_q_n_plus_half(t, q1, q2, v1, v2, v3, params):
+    """
+    Return the terms C_q1_n_plus_half, C_q2_n_plus_half.
+
+    Parameters:
+    -----------
+    t : Time elapsed
     
+    q1 : The array that holds data for the q1 dimension in q-space
+         shape:(1, 1, N_q1, N_q2)
+
+    q2 : The array that holds data for the q2 dimension in q-space
+         shape:(1, 1, N_q1, N_q2)
+
+    v1 : The array that holds data for the v1 dimension in v-space
+         shape:(N_v, N_s, 1, 1)
+
+    v2 : The array that holds data for the v2 dimension in v-space
+         shape:(N_v, N_s, 1, 1)
+
+    v3 : The array that holds data for the v3 dimension in v-space
+         shape:(N_v, N_s, 1, 1)
+
+    params: The parameters file/object that is originally declared by the user.
+            This can be used to inject other functions/attributes into the function
+
+    """
     C_q1 = v1
     C_q2 = v2
 
@@ -144,12 +173,55 @@ def A_p(t, q1, q2, v1, v2, v3,
 
 # Conservative Advection terms in p-space:
 # Used by the FVM solver:
-def C_p(t, q1, q2, v1, v2, v3,
-        fields_solver,
-        params, field_locations = 'center'
-       ):
+def C_p_n(t, q1, q2, v1, v2, v3,
+          fields_solver,
+          params, field_locations = 'center'
+         ):
     """
-    Return the terms C_v1, C_v2 and C_v3.
+    Return the terms C_v1_n, C_v2_n and C_v3_n.
+
+    Parameters:
+    -----------
+    t : Time elapsed
+    
+    q1 : The array that holds data for the q1 dimension in q-space
+         shape:(1, 1, N_q1, N_q2)
+
+    q2 : The array that holds data for the q2 dimension in q-space
+         shape:(1, 1, N_q1, N_q2)
+
+    v1 : The array that holds data for the v1 dimension in v-space
+         shape:(N_v, N_s, 1, 1)
+
+    v2 : The array that holds data for the v2 dimension in v-space
+         shape:(N_v, N_s, 1, 1)
+
+    v3 : The array that holds data for the v3 dimension in v-space
+         shape:(N_v, N_s, 1, 1)
+
+    fields_solver: The solver object whose method get_fields() is used to 
+                   obtain the EM field quantities
+
+    params: The parameters file/object that is originally declared by the user.
+            This can be used to inject other functions/attributes into the function
+    """
+    e = params.charge
+    m = params.mass
+
+    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields(field_locations)
+
+    C_p1 = (v1**2 / 2) * (e/m) * (E1 + v2 * B3 - v3 * B2)
+    C_p2 = (v2**2 / 2) * (e/m) * (E2 + v3 * B1 - v1 * B3)
+    C_p3 = (v3**2 / 2) * (e/m) * (E3 + v1 * B2 - v2 * B1)
+
+    return (C_p1, C_p2, C_p3)
+
+def C_p_n_plus_half(t, q1, q2, v1, v2, v3,
+                    fields_solver,
+                    params, field_locations = 'center'
+                   ):
+    """
+    Return the terms C_v1_n, C_v2_n and C_v3_n.
 
     Parameters:
     -----------
