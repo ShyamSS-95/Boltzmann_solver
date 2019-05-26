@@ -369,7 +369,7 @@ class nonlinear_solver(object):
 
         # Applying dirichlet boundary conditions:        
         # Arguments that are passing to the called functions:
-        args = (self.f, self.time_elapsed, self.q1_center, self.q2_center,
+        args = (self.f_n, self.time_elapsed, self.q1_center, self.q2_center,
                 self.p1_center, self.p2_center, self.p3_center, 
                 self.physical_system.params
                )
@@ -399,8 +399,8 @@ class nonlinear_solver(object):
                                          f_top(*args)[:, :, :, -N_g:]
 
         # Assigning the value to the PETSc Vecs(for dump at t = 0):
-        (af.flat(self.f)).to_ndarray(self._local_f_array)
-        (af.flat(self.f[:, :, N_g:-N_g, N_g:-N_g])).to_ndarray(self._glob_f_array)
+        (af.flat(self.f_n)).to_ndarray(self._local_f_array)
+        (af.flat(self.f_n[:, :, N_g:-N_g, N_g:-N_g])).to_ndarray(self._glob_f_array)
 
         # Assigning the function objects to methods of the solver:
         self._A_q = physical_system.A_q
@@ -416,7 +416,7 @@ class nonlinear_solver(object):
         self._source = physical_system.source
 
         # Getting f at the cell edges:
-        get_f_cell_edges_q(self.f, self)
+        get_f_cell_edges_q(self.f_n, self)
 
     def _convert_to_q_expanded(self, array):
         """
@@ -495,12 +495,13 @@ class nonlinear_solver(object):
         # when operating on arrays of different sizes
         # af.broadcast(function, *args) performs batched 
         # operations on function(*args)
-        self.f = af.broadcast(self.physical_system.initial_conditions.\
-                              initialize_f, self.q1_center, self.q2_center,
-                              self.p1_center, self.p2_center, self.p3_center, params
-                             )
+        self.f_initial = af.broadcast(self.physical_system.initial_conditions.\
+                                      initialize_f, self.q1_center, self.q2_center,
+                                      self.p1_center, self.p2_center, self.p3_center, params
+                                     )
 
-        self.f_initial = self.f
+        self.f_n           = self.f_initial.copy()
+        self.f_n_plus_half = self.f_initial.copy()
 
         if(self.physical_system.params.fields_enabled):
             

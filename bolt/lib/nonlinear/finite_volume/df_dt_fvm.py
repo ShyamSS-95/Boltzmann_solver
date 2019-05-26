@@ -43,6 +43,12 @@ def get_f_cell_edges_q(f, self, variable):
     # Extending the same to bot:
     f_bot_minus_eps  = af.shift(f_top_minus_eps,   0, 0, 0, 1)
 
+    # Nicer variable for passing the arguments:
+    args_left_center = (self.time_elapsed, self.q1_center, self.q2_center,
+                        self.p1_center, self.p2_center, self.p3_center, 
+                        self.physical_system.params
+                       )
+
     # af.broadcast used to perform batched operations on arrays of different sizes:
     self._C_q1 = af.broadcast(self._C_q, self.time_elapsed, 
                               self.q1_left_center, self.q2_left_center,

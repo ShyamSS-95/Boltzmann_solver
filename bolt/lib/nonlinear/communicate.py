@@ -3,13 +3,19 @@
 
 import arrayfire as af
 
-def communicate_f(self):
+def communicate_f(self, at_n):
     """
     Used in communicating the values at the boundary zones
     for each of the local vectors among all procs.
     This routine is called to take care of communication
     (and periodic B.C's) procedures for the distribution
     function array.
+
+    Parameters
+    ----------
+    at_n - bool
+           When toggled to true, the variable communicated between processors
+           is f_n. Otherwise it uses f_n_plus_half
     """
     if(self.performance_test_flag == True):
         tic = af.time()
@@ -30,10 +36,16 @@ def communicate_f(self):
        or self.boundary_conditions.in_q2_bottom == 'dirichlet' 
        or self.boundary_conditions.in_q2_top    == 'dirichlet' 
       ):
-        af.flat(self.f).to_ndarray(self._local_f_array)
+        if(at_n == True):
+            af.flat(self.f_n).to_ndarray(self._local_f_array)
+        else:
+            af.flat(self.f_n_plus_half).to_ndarray(self._local_f_array)
 
     # Global value is non-inclusive of the ghost-zones:
-    af.flat(self.f[:, :, N_g:-N_g, N_g:-N_g]).to_ndarray(self._glob_f_array)
+    if(at_n == True):
+        af.flat(self.f_n[:, :, N_g:-N_g, N_g:-N_g]).to_ndarray(self._glob_f_array)
+    else:
+        af.flat(self.f_n_plus_half[:, :, N_g:-N_g, N_g:-N_g]).to_ndarray(self._glob_f_array)
 
     # The following function takes care of interzonal communications
     # Additionally, it also automatically applies periodic BCs when necessary
@@ -41,16 +53,26 @@ def communicate_f(self):
 
     # Converting back from PETSc.Vec to af.Array:
     f_flattened = af.to_array(self._local_f_array)
-    self.f      = af.moddims(f_flattened,
-                               self.N_p1 
-                             * self.N_p2 
-                             * self.N_p3,
-                             self.N_species,
-                             N_q1_local + 2 * N_g,
-                             N_q2_local + 2 * N_g
-                            )
-
-    af.eval(self.f)
+    if(at_n == True):
+        self.f_n = af.moddims(f_flattened,
+                                self.N_p1 
+                              * self.N_p2 
+                              * self.N_p3,
+                              self.N_species,
+                              N_q1_local + 2 * N_g,
+                              N_q2_local + 2 * N_g
+                             )
+        af.eval(self.f_n)
+    else:
+        self.f_n_plus_half = af.moddims(f_flattened,
+                                          self.N_p1 
+                                        * self.N_p2 
+                                        * self.N_p3,
+                                        self.N_species,
+                                        N_q1_local + 2 * N_g,
+                                        N_q2_local + 2 * N_g
+                                      )        
+        af.eval(self.f_n_plus_half)
 
     if(self.performance_test_flag == True):
         af.sync()
@@ -58,7 +80,6 @@ def communicate_f(self):
         self.time_communicate_f += toc - tic
 
     return
-
 
 def communicate_fields(self, on_fdtd_grid = False):
     """

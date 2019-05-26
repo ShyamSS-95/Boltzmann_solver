@@ -37,7 +37,7 @@ def compute_moments(self, moment_name, f=None):
     p3 = self.p3_center
 
     if(f is None):
-        f = self.f
+        f = self.f_n
         
     moment = af.broadcast(getattr(self.physical_system.moments, 
                                   moment_name
