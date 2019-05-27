@@ -75,7 +75,7 @@ def dump_moments(self, file_name, loc = 'center'):
         attributes.remove('integral_over_v')
 
     if(loc == 'center'):
-        f = self.f
+        f = self.f_n
 
     if(loc == 'left_center'):
         f = self.f_q1_left_q2_center
@@ -153,10 +153,10 @@ def dump_distribution_function(self, file_name):
     """
     N_g = self.N_ghost
     
-    N_q1_local = self.f.shape[2]
-    N_q2_local = self.f.shape[3]
+    N_q1_local = self.f_n.shape[2]
+    N_q2_local = self.f_n.shape[3]
 
-    array_to_dump = self.f
+    array_to_dump = self.f_n
     
     array_to_dump = af.flat(array_to_dump[:, :, N_g:-N_g, N_g:-N_g])
     array_to_dump.to_ndarray(self._glob_f_array)

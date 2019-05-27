@@ -416,7 +416,7 @@ class nonlinear_solver(object):
         self._source = physical_system.source
 
         # Getting f at the cell edges:
-        get_f_cell_edges_q(self.f_n, self)
+        get_f_cell_edges_q(self.f_n, self, True)
 
     def _convert_to_q_expanded(self, array):
         """

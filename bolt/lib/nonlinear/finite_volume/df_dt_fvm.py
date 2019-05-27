@@ -30,7 +30,7 @@ d(f_{i+1/2, j+1/2})/dt  = ((- (C_q1 * f)_{i + 1, j + 1/2} + (C_q1 * f)_{i, j + 1
 The same concept is extended to p-space as well.                          
 """
 
-def get_f_cell_edges_q(f, self, variable):
+def get_f_cell_edges_q(f, self, at_n):
 
     # Giving shorter name reference:
     reconstruction_in_q = self.physical_system.params.reconstruction_method_in_q
@@ -43,31 +43,33 @@ def get_f_cell_edges_q(f, self, variable):
     # Extending the same to bot:
     f_bot_minus_eps  = af.shift(f_top_minus_eps,   0, 0, 0, 1)
 
-    # Nicer variable for passing the arguments:
-    args_left_center = (self.time_elapsed, self.q1_center, self.q2_center,
+    # Nicer variables for passing the arguments:
+    args_left_center = (self.time_elapsed, self.q1_left_center, self.q2_left_center,
                         self.p1_center, self.p2_center, self.p3_center, 
                         self.physical_system.params
                        )
 
-    # af.broadcast used to perform batched operations on arrays of different sizes:
-    self._C_q1 = af.broadcast(self._C_q, self.time_elapsed, 
-                              self.q1_left_center, self.q2_left_center,
-                              self.p1_center, self.p2_center, self.p3_center,
-                              self.physical_system.params
-                             )[0]
+    args_center_bot = (self.time_elapsed, self.q1_center_bot, self.q2_center_bot,
+                       self.p1_center, self.p2_center, self.p3_center, 
+                       self.physical_system.params
+                      )                       
 
-    self._C_q2 = af.broadcast(self._C_q, self.time_elapsed, 
-                              self.q1_center_bot, self.q2_center_bot,
-                              self.p1_center, self.p2_center, self.p3_center,
-                              self.physical_system.params
-                             )[1]
+    # af.broadcast used to perform batched operations on arrays of different sizes:
+    if(at_n == True):
+        self._C_q1 = af.broadcast(self._C_q_n, *args_left_center)[0]
+        self._C_q2 = af.broadcast(self._C_q_n, *args_center_bot)[1]
+
+    else:
+        self._C_q1 = af.broadcast(self._C_q_n_plus_half, *args_left_center)[0]
+        self._C_q2 = af.broadcast(self._C_q_n_plus_half, *args_center_bot)[1]
+
 
     self.f_q1_left_q2_center = riemann_solver(self, f_left_minus_eps, f_left_plus_eps, self._C_q1)
     self.f_q1_center_q2_bot  = riemann_solver(self, f_bot_minus_eps, f_bot_plus_eps, self._C_q2)
 
     return
 
-def df_dt_fvm(f, self, term_to_return = 'all'):
+def df_dt_fvm(f, self, at_n, term_to_return = 'all'):
     """
     Returns the expression for df/dt which is then 
     evolved by a timestepper.
@@ -88,7 +90,7 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
 
     if(self.physical_system.params.solver_method_in_q == 'FVM'):
 
-        get_f_cell_edges_q(f, self)
+        get_f_cell_edges_q(f, self, at_n)
 
         left_flux = multiply(self._C_q1, self.f_q1_left_q2_center)
         bot_flux  = multiply(self._C_q2, self.f_q1_center_q2_bot)
@@ -282,8 +284,6 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
                            self.fields_solver, self.physical_system.params
                           )[2]
 
-            self.fields_solver.at_n = not(self.fields_solver.at_n)
-
             # Converting to p-expanded form (Np1, Np2, Np3, Ns * Nq1 * Nq2):
             self._C_p1_left_at_q1_center_q2_center \
             = self._convert_to_p_expanded(self._C_p1_left_at_q1_center_q2_center)
@@ -350,31 +350,43 @@ def df_dt_fvm(f, self, term_to_return = 'all'):
 
         else:
 
-            # Getting C_p at q1_left_q2_center:
-            self._C_p1_left_at_q1_left_q2_center \
-            = af.broadcast(self._C_p, self.time_elapsed,
-                           self.q1_center, self.q2_center,
-                           self.p1_left, self.p2_left, self.p3_left,
-                           self.fields_solver, self.physical_system.params, 
-                           'left_center'
-                          )[0]
+            # Nicer variables for passing the arguments:
+            args_p_left = (self.time_elapsed, self.q1_center, self.q2_center,
+                           self.p1_left, self.p2_left, self.p3_left, self.fields_solver,
+                           self.physical_system.params, 'left_center'
+                          )
 
-            # Getting C_p at q1_center_q2_bot:
-            self._C_p2_bot_at_q1_center_q2_bot \
-            = af.broadcast(self._C_p, self.time_elapsed,
-                           self.q1_center, self.q2_center,
-                           self.p1_bottom, self.p2_bottom, self.p3_bottom,
-                           self.fields_solver, self.physical_system.params, 
-                           'center_bottom'
-                          )[1]
+            args_p_bottom = (self.time_elapsed, self.q1_center, self.q2_center,
+                             self.p1_bottom, self.p2_bottom, self.p3_bottom, self.fields_solver,
+                             self.physical_system.params, 'center_bottom'
+                            )                       
 
-            # Getting C_p at q1_center_q2_center:
-            self._C_p3_back_at_q1_center_q2_center \
-            = af.broadcast(self._C_p, self.time_elapsed,
-                           self.q1_center, self.q2_center,
-                           self.p1_back, self.p2_back, self.p3_back,
-                           self.fields_solver, self.physical_system.params
-                          )[2]
+            args_p_back = (self.time_elapsed, self.q1_center, self.q2_center,
+                           self.p1_back, self.p2_back, self.p3_back,  self.fields_solver,
+                           self.physical_system.params
+                          )                       
+
+            if(at_n == True):
+                # Getting C_p at q1_left_q2_center:
+                self._C_p1_left_at_q1_left_q2_center \
+                = af.broadcast(self._C_p_n, *args_p_left)[0]
+                # Getting C_p at q1_center_q2_bot:
+                self._C_p2_bot_at_q1_center_q2_bot \
+                = af.broadcast(self._C_p_n, *args_p_bottom)[1]
+                # Getting C_p at q1_center_q2_center:
+                self._C_p3_back_at_q1_center_q2_center \
+                = af.broadcast(self._C_p_n, *args_p_back)[2]
+            
+            else:
+                # Getting C_p at q1_left_q2_center:
+                self._C_p1_left_at_q1_left_q2_center \
+                = af.broadcast(self._C_p_n_plus_half, *args_p_left)[0]
+                # Getting C_p at q1_center_q2_bot:
+                self._C_p2_bot_at_q1_center_q2_bot \
+                = af.broadcast(self._C_p_n_plus_half, *args_p_bottom)[1]
+                # Getting C_p at q1_center_q2_center:
+                self._C_p3_back_at_q1_center_q2_center \
+                = af.broadcast(self._C_p_n_plus_half, *args_p_back)[2]
 
             # Alternating upon each call:
             self.fields_solver.at_n = not(self.fields_solver.at_n)

@@ -19,16 +19,16 @@ def timestep_fvm(self, dt):
          Time-step size to evolve the system
     """
     self.f_n_plus_half = self.f_n_plus_half + df_dt_fvm(self.f_n, self, False)
+    af.eval(self.f_n_plus_half)
 
+    # These would be applied to f_n_plus_half
     self._communicate_f(False)
-    self._apply_bcs_f(False)
+    # TEMP:NOT NEEDED FOR PERIODIC BCS TESTING
+    #self._apply_bcs_f(False)
 
     # The final argument of 'n' is to tell the solver to use C_p_n and C_q_n
     self.f_n = self.f_n + df_dt_fvm(self.f_n_plus_half, self, True) * dt
-
-    # These would be applied to f_n
-    self._communicate_f(True)
-    self._apply_bcs_f(True)
+    af.eval(self.f_n)
 
 def update_for_instantaneous_collisions(self, dt):
     
@@ -44,18 +44,19 @@ def update_for_instantaneous_collisions(self, dt):
 
 def op_fvm(self, dt):
 
-    self._communicate_f()
-    self._apply_bcs_f()
-
     if(self.performance_test_flag == True):
         tic = af.time()
+    
+    # These would be applied to f_n
+    self._communicate_f(True)
+    # TEMP:NOT NEEDED FOR PERIODIC BCS TESTING
+    #self._apply_bcs_f(True)
 
     if(self.physical_system.params.instantaneous_collisions == True):
         split.strang(self, timestep_fvm, update_for_instantaneous_collisions, dt)
     else:
         timestep_fvm(self, dt)
 
-    af.eval(self.f)
     if(self.performance_test_flag == True):
         af.sync()
         toc = af.time()

@@ -32,8 +32,8 @@ def check_divergence(self):
     undefined.
     """
 
-    if(   af.any_true(af.isinf(self.f))
-       or af.any_true(af.isnan(self.f))
+    if(   af.any_true(af.isinf(self.f_n))
+       or af.any_true(af.isnan(self.f_n))
       ):
         raise SystemExit('Solver Diverging!')
 
@@ -148,7 +148,6 @@ def strang_step(self, dt):
         else:
             split.strang(self, op_advect_q, op_solve_src, dt)
 
-    af.eval(self.f)
     check_divergence(self)
     self.time_elapsed += dt 
 
