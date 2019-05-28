@@ -114,149 +114,31 @@ def df_dt_fvm(f, self, at_n, term_to_return = 'all'):
     if(    self.physical_system.params.solver_method_in_p == 'FVM' 
        and self.physical_system.params.fields_enabled == True
       ):
-        if(    self.physical_system.params.fields_type == 'electrodynamic'
-           and self.fields_solver.at_n == False
-          ):
-            if(self.physical_system.params.hybrid_model_enabled == True):
-
-                communicate_fields(self.fields_solver, True)
-                B1 = self.fields_solver.yee_grid_EM_fields[3] # (i + 1/2, j)
-                B2 = self.fields_solver.yee_grid_EM_fields[4] # (i, j + 1/2)
-                B3 = self.fields_solver.yee_grid_EM_fields[5] # (i, j)
-
-                B1_plus_q2 = af.shift(B1, 0, 0, 0, -1)
-
-                B2_plus_q1 = af.shift(B2, 0, 0, -1, 0)
-
-                B3_plus_q1 = af.shift(B3, 0, 0, -1, 0)
-                B3_plus_q2 = af.shift(B3, 0, 0, 0, -1)
-
-                # curlB_x =  dB3/dq2
-                curlB_1 =  (B3_plus_q2 - B3) / self.dq2 # (i, j + 1/2)
-                # curlB_y = -dB3/dq1
-                curlB_2 = -(B3_plus_q1 - B3) / self.dq1 # (i + 1/2, j)
-                # curlB_z = (dB2/dq1 - dB1/dq2)
-                curlB_3 =  (B2_plus_q1 - B2) / self.dq1 - (B1_plus_q2 - B1) / self.dq2 # (i + 1/2, j + 1/2)
-
-                # c --> inf limit: J = (∇ x B) / μ
-                mu = self.physical_system.params.mu
-                J1 = curlB_1 / mu # (i, j + 1/2)
-                J2 = curlB_2 / mu # (i + 1/2, j)
-                J3 = curlB_3 / mu # (i + 1/2, j + 1/2)
-                
-                # Using Generalized Ohm's Law for electric field:
-                # (v X B)_x = B3 * v2 - B2 * v3
-                # (v X B)_x --> (i, j + 1/2)
-                v_cross_B_1 =   0.5 * (B3_plus_q2 + B3) * self.compute_moments('mom_v2_bulk', f = f_left) \
-                                                        / self.compute_moments('density', f = f_left) \
-                              - B2                      * self.compute_moments('mom_v3_bulk', f = f_left) \
-                                                        / self.compute_moments('density', f = f_left)
-                
-                # (v X B)_y = B1 * v3 - B3 * v1
-                # (v X B)_y --> (i + 1/2, j)
-                v_cross_B_2 =   B1                      * self.compute_moments('mom_v3_bulk', f = f_bot) \
-                                                        / self.compute_moments('density', f = f_bot) \
-                              - 0.5 * (B3_plus_q1 + B3) * self.compute_moments('mom_v1_bulk', f = f_bot) \
-                                                        / self.compute_moments('density', f = f_bot)
-                # (v X B)_z = B2 * v1 - B1 * v2
-                # (v X B)_z --> (i + 1/2, j + 1/2)
-                v_cross_B_3 =   0.5 * (B2_plus_q1 + B2) * self.compute_moments('mom_v1_bulk', f = f) \
-                                                        / self.compute_moments('density', f = f) \
-                              - 0.5 * (B1_plus_q2 + B1) * self.compute_moments('mom_v2_bulk', f = f) \
-                                                        / self.compute_moments('density', f = f)
-
-                # (J X B)_x = B3 * J2 - B2 * J3
-                # (J X B)_x --> (i, j + 1/2)
-                J_cross_B_1 =   0.5 * (B3_plus_q2 + B3) * (  J2 + af.shift(J2, 0, 0, 0, -1)
-                                                           + af.shift(J2, 0, 0, 1) + af.shift(J2, 0, 0, 1, -1)
-                                                          ) * 0.25 \
-                              - B2                      * (af.shift(J3, 0, 0, 1) + J3) * 0.5
-
-                # (J X B)_y = B1 * J3 - B3 * J1
-                # (J X B)_y --> (i + 1/2, j)
-                J_cross_B_2 =   B1                      * (af.shift(J3, 0, 0, 0, 1) + J3) * 0.5 \
-                              - 0.5 * (B3_plus_q1 + B3) * (  J1 + af.shift(J1, 0, 0, 0, 1)
-                                                           + af.shift(J1, 0, 0, -1) + af.shift(J1, 0, 0, -1, 1)
-                                                          ) * 0.25
-
-                # (J X B)_z = B2 * J1 - B1 * J2
-                # (J X B)_z --> (i + 1/2, j + 1/2)
-                J_cross_B_3 =   0.5 * (B2_plus_q1 + B2) * (af.shift(J1, 0, 0, -1) + J1) * 0.5 \
-                              - 0.5 * (B1_plus_q2 + B1) * (af.shift(J2, 0, 0, 0, -1) + J2) * 0.5
-
-                n_i = self.compute_moments('density')
-                T_e = self.physical_system.params.fluid_electron_temperature
-
-                # Using a 4th order stencil:
-                dn_q1 = (-     af.shift(n_i, 0, 0, -2) + 8 * af.shift(n_i, 0, 0, -1) 
-                         - 8 * af.shift(n_i, 0, 0,  1) +     af.shift(n_i, 0, 0,  2)
-                        ) / (12 * self.dq1)
-
-                dn_q2 = (-     af.shift(n_i, 0, 0, 0, -2) + 8 * af.shift(n_i, 0, 0, 0, -1) 
-                         - 8 * af.shift(n_i, 0, 0, 0,  1) +     af.shift(n_i, 0, 0, 0,  2)
-                        ) / (12 * self.dq2)
-
-                # E = -(v X B) + (J X B) / (en) - T ∇n / (en)
-                E1 = -v_cross_B_1 + J_cross_B_1 \
-                                  / (multiply(self.compute_moments('density', f = f_left),
-                                              self.physical_system.params.charge
-                                             )
-                                    ) \
-                                  - 0.5 * T_e * (dn_q1 + af.shift(dn_q1, 0, 0, 1)) / multiply(self.physical_system.params.charge, n_i) # (i, j + 1/2)
-
-                E2 = -v_cross_B_2 + J_cross_B_2 \
-                                  / (multiply(self.compute_moments('density', f = f_bot),
-                                              self.physical_system.params.charge
-                                             )
-                                    ) \
-                                  - 0.5 * T_e * (dn_q2 + af.shift(dn_q2, 0, 0, 0, 1)) / multiply(self.physical_system.params.charge, n_i) # (i + 1/2, j)
-
-                E3 = -v_cross_B_3 + J_cross_B_3 \
-                                  / (multiply(self.compute_moments('density', f = f),
-                                              self.physical_system.params.charge
-                                             )
-                                    ) # (i + 1/2, j + 1/2)
-                
-                self.fields_solver.yee_grid_EM_fields[0] = E1
-                self.fields_solver.yee_grid_EM_fields[1] = E2
-                self.fields_solver.yee_grid_EM_fields[2] = E3
-
-                af.eval(self.fields_solver.yee_grid_EM_fields)
-
-            else:
-
-                J1 = multiply(self.physical_system.params.charge,
-                              self.compute_moments('mom_v1_bulk', f = self.f_q1_left_q2_center)
-                             ) # (i, j + 1/2)
-
-                J2 = multiply(self.physical_system.params.charge,
-                              self.compute_moments('mom_v2_bulk', f = self.f_q1_center_q2_bot)
-                             ) # (i + 1/2, j)
-
-                J3 = multiply(self.physical_system.params.charge, 
-                              self.compute_moments('mom_v3_bulk', f = f)
-                             ) # (i + 1/2, j + 1/2)
-
-            # This gets called only at the (n+1/2)-th step
-            # This means that J's are at (n+1/2)
-            # evolves E^n       --> E^{n + 1}
-            # evolves B^{n+1/2} --> B^{n + 3 / 2}
-            # Updates cell_centered_EM_fields_at_{n/n_plus_half}:
-            # cell_centered_EM_fields_at_n from (E^{n-1}, B^{n-1}) ---> (E^{n}, B^{n})
-            # cell_centered_EM_fields_at_n_plus_half from (E^{n-1/2}, B^{n-1/2}) ---> (E^{n+1/2}, B^{n+1/2})
-            self.fields_solver.evolve_electrodynamic_fields(J1, J2, J3, self.dt)
-
         if(self.physical_system.params.fields_type == 'electrostatic'):
             if(self.physical_system.params.fields_solver == 'fft'):
-
                 rho = multiply(self.physical_system.params.charge,
-                               self.compute_moments('density', f = f)
-                              )
+                                self.compute_moments('density', f = f)
+                                )
 
                 self.fields_solver.compute_electrostatic_fields(rho)
 
+        if(self.physical_system.params.fields_type == 'electrodynamic'):
+            J1 = multiply(self.physical_system.params.charge,
+                            self.compute_moments('mom_v1_bulk', f = self.f_q1_left_q2_center)
+                            ) # (i, j + 1/2)
+
+            J2 = multiply(self.physical_system.params.charge,
+                            self.compute_moments('mom_v2_bulk', f = self.f_q1_center_q2_bot)
+                            ) # (i + 1/2, j)
+
+            J3 = multiply(self.physical_system.params.charge, 
+                            self.compute_moments('mom_v3_bulk', f = f)
+                            ) # (i + 1/2, j + 1/2)
+
+            self.fields_solver.evolve_electrodynamic_fields(J1, J2, J3, at_n, self.dt)
 
         if(self.physical_system.params.energy_conserving == False):
+
             # Fields solver object is passed to C_p where the get_fields method
             # is used to get the electromagnetic fields. The fields returned are
             # located at the center of the cell. The fields returned are in accordance with
@@ -340,13 +222,6 @@ def df_dt_fvm(f, self, at_n, term_to_return = 'all'):
             d_flux_p3_dp3 = multiply((front_flux_p3 - back_flux_p3), 1 / self.dp3)
 
             df_dt += -(d_flux_p1_dp1 + d_flux_p2_dp2 + d_flux_p3_dp3)
-            
-            # print(af.sum(multiply(d_flux_p1_dp1, self.p1_center**2)))
-            # J1 = multiply(self.physical_system.params.charge,
-            #               self.compute_moments('mom_v1_bulk', f = self._convert_to_q_expanded(f))
-            #              ) # (i + 1/2, j + 1/2)
-
-            # print(2 * af.sum(self.fields_solver.yee_grid_EM_fields_at_n_plus_half[0] * J1))
 
         else:
 
@@ -396,9 +271,9 @@ def df_dt_fvm(f, self, at_n, term_to_return = 'all'):
             self._C_p2_bot_at_q1_center_q2_bot     = self._convert_to_p_expanded(self._C_p2_bot_at_q1_center_q2_bot)
             self._C_p3_back_at_q1_center_q2_center = self._convert_to_p_expanded(self._C_p3_back_at_q1_center_q2_center)
 
-            self.f_q1_left_q2_center   = self._convert_to_p_expanded(self.f_q1_left_q2_center)
-            self.f_q1_center_q2_bot    = self._convert_to_p_expanded(self.f_q1_center_q2_bot)
-            f_q1_center_q2_center = self._convert_to_p_expanded(f)
+            self.f_q1_left_q2_center = self._convert_to_p_expanded(self.f_q1_left_q2_center)
+            self.f_q1_center_q2_bot  = self._convert_to_p_expanded(self.f_q1_center_q2_bot)
+            f_q1_center_q2_center    = self._convert_to_p_expanded(f)
 
             # Variation of p1 is along axis 0:
             f_p1_left_plus_eps_at_q1_left_q2_center, f_p1_right_minus_eps_at_q1_left_q2_center \

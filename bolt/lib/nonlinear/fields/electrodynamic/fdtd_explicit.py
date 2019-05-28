@@ -19,6 +19,9 @@ def fdtd_evolve_E(self, dt):
     
     if(self.performance_test_flag == True):
         tic = af.time()
+    
+    communicate_fields(self, True)
+    apply_bcs_fields(self, True)
 
     eps = self.params.eps
     mu  = self.params.mu
@@ -93,6 +96,9 @@ def fdtd_evolve_B(self, dt):
     """
     if(self.performance_test_flag == True):
         tic = af.time()
+    
+    apply_bcs_fields(self, True)
+    communicate_fields(self, True)
 
     dq1 = self.dq1
     dq2 = self.dq2
@@ -166,12 +172,7 @@ def fdtd(self, dt):
     # The communicate function transfers the data from the 
     # local vectors to the global vectors, in addition to  
     # dealing with periodic boundary conditions:
-    communicate_fields(self, True)
-    apply_bcs_fields(self, True)
     fdtd_evolve_E(self, dt)
-    
-    communicate_fields(self, True)
-    apply_bcs_fields(self, True)
     fdtd_evolve_B(self, dt)
     
     return

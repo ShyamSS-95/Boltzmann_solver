@@ -10,7 +10,7 @@ from .. import communicate
 from .boundaries import apply_bcs_fields
 
 from .electrostatic.fft import fft_poisson
-from .electrodynamic.fdtd_explicit import fdtd
+from .electrodynamic.fdtd_explicit import fdtd_evolve_B, fdtd_evolve_E
 
 from bolt.lib.utils.calculate_q import \
     calculate_q_center, calculate_q_left_center, \
@@ -393,40 +393,12 @@ class fields_solver(object):
                                                    dtype=af.Dtype.f64
                                                   )
 
-        # Field values at n-th timestep:
-        self.cell_centered_EM_fields_at_n = af.constant(0, 6, 1, 
-                                                        N_q1_local + 2 * self.N_g,
-                                                        N_q2_local + 2 * self.N_g,
-                                                        dtype=af.Dtype.f64
-                                                       )
-
-        # Field values at (n+1/2)-th timestep:
-        self.cell_centered_EM_fields_at_n_plus_half = af.constant(0, 6, 1, 
-                                                                  N_q1_local + 2 * self.N_g,
-                                                                  N_q2_local + 2 * self.N_g,
-                                                                  dtype=af.Dtype.f64
-                                                                 )
-
         # Declaring the arrays which store data on the yee grid for FDTD:
         self.yee_grid_EM_fields = af.constant(0, 6, 1, 
                                               N_q1_local + 2 * self.N_g,
                                               N_q2_local + 2 * self.N_g,
                                               dtype=af.Dtype.f64
                                              )
-
-        # Field values at n-th timestep on the Yee Grid:
-        self.yee_grid_EM_fields_at_n = af.constant(0, 6, 1, 
-                                                   N_q1_local + 2 * self.N_g,
-                                                   N_q2_local + 2 * self.N_g,
-                                                   dtype=af.Dtype.f64
-                                                  )
-
-        # Field values at (n+1/2)-th timestep on the Yee grid:
-        self.yee_grid_EM_fields_at_n_plus_half = af.constant(0, 6, 1, 
-                                                             N_q1_local + 2 * self.N_g,
-                                                             N_q2_local + 2 * self.N_g,
-                                                             dtype=af.Dtype.f64
-                                                            )
 
         if (self.params.fields_initialize == 'fft'):
             fft_poisson(self, rho_initial)
@@ -456,76 +428,191 @@ class fields_solver(object):
         else:
             raise NotImplementedError('Method not valid/not implemented')
 
-        # At t = 0, we take the value of B_{0} = B{1/2}:
-        self.cell_centered_EM_fields_at_n = self.cell_centered_EM_fields.copy()
-        self.cell_centered_EM_fields_at_n_plus_half = self.cell_centered_EM_fields.copy()
-        self.yee_grid_EM_fields_at_n = self.yee_grid_EM_fields.copy()
-        self.yee_grid_EM_fields_at_n_plus_half = self.yee_grid_EM_fields.copy()
+        self.cell_centered_EM_fields_at_n            = self.cell_centered_EM_fields.copy()
+        self.cell_centered_EM_fields_at_n_plus_one   = self.cell_centered_EM_fields.copy()
+        self.cell_centered_EM_fields_at_n_minus_half = self.cell_centered_EM_fields.copy()
+        self.cell_centered_EM_fields_at_n_plus_half  = self.cell_centered_EM_fields.copy()
+
+        self.yee_grid_EM_fields_at_n            = self.yee_grid_EM_fields.copy()
+        self.yee_grid_EM_fields_at_n_plus_one   = self.yee_grid_EM_fields.copy()
+        self.yee_grid_EM_fields_at_n_minus_half = self.yee_grid_EM_fields.copy()
+        self.yee_grid_EM_fields_at_n_plus_half  = self.yee_grid_EM_fields.copy()
 
         return
 
-    def cell_centered_grid_to_yee_grid(self, fields_to_transform = None):
+    def cell_centered_grid_to_yee_grid(self, time_level = None, fields_to_transform = None):
         """
         Making use of the fields_to_transform option, one can convert
         the magnetic fields or the electric fields alone. The default
         option is to convert both when the option is passed as None
         """
-        E1 = self.cell_centered_EM_fields[0]
-        E2 = self.cell_centered_EM_fields[1]
-        E3 = self.cell_centered_EM_fields[2]
+        if(time_level == 'n'):
 
-        B1 = self.cell_centered_EM_fields[3]
-        B2 = self.cell_centered_EM_fields[4]
-        B3 = self.cell_centered_EM_fields[5]
+            E1 = self.cell_centered_EM_fields_at_n[0]
+            E2 = self.cell_centered_EM_fields_at_n[1]
+            E3 = self.cell_centered_EM_fields_at_n[2]
 
-        if(fields_to_transform == 'E' or fields_to_transform == None):
-            self.yee_grid_EM_fields[0] = 0.5 * (E1 + af.shift(E1, 0, 0, 1, 0))  # (i, j+1/2)
-            self.yee_grid_EM_fields[1] = 0.5 * (E2 + af.shift(E2, 0, 0, 0, 1))  # (i+1/2, j)
-            self.yee_grid_EM_fields[2] = E3  # (i+1/2, j+1/2)
+            B1 = self.cell_centered_EM_fields_at_n[3]
+            B2 = self.cell_centered_EM_fields_at_n[4]
+            B3 = self.cell_centered_EM_fields_at_n[5]
 
-        if(fields_to_transform == 'B' or fields_to_transform == None):
-            self.yee_grid_EM_fields[3] = 0.5 * (B1 + af.shift(B1, 0, 0, 0, 1)) # (i+1/2, j) 
-            self.yee_grid_EM_fields[4] = 0.5 * (B2 + af.shift(B2, 0, 0, 1, 0)) # (i, j+1/2)
-            self.yee_grid_EM_fields[5] = 0.25 * (  B3 
-                                                 + af.shift(B3, 0, 0, 1, 0)
-                                                 + af.shift(B3, 0, 0, 0, 1) 
-                                                 + af.shift(B3, 0, 0, 1, 1)
-                                                ) # (i, j)
+            if(fields_to_transform == 'E' or fields_to_transform == None):
+                self.yee_grid_EM_fields_at_n[0] = 0.5 * (E1 + af.shift(E1, 0, 0, 1, 0))  # (i, j+1/2)
+                self.yee_grid_EM_fields_at_n[1] = 0.5 * (E2 + af.shift(E2, 0, 0, 0, 1))  # (i+1/2, j)
+                self.yee_grid_EM_fields_at_n[2] = E3  # (i+1/2, j+1/2)
 
-        af.eval(self.yee_grid_EM_fields)
+            if(fields_to_transform == 'B' or fields_to_transform == None):
+                self.yee_grid_EM_fields_at_n[3] = 0.5 * (B1 + af.shift(B1, 0, 0, 0, 1)) # (i+1/2, j) 
+                self.yee_grid_EM_fields_at_n[4] = 0.5 * (B2 + af.shift(B2, 0, 0, 1, 0)) # (i, j+1/2)
+                self.yee_grid_EM_fields_at_n[5] = 0.25 * (  B3 
+                                                          + af.shift(B3, 0, 0, 1, 0)
+                                                          + af.shift(B3, 0, 0, 0, 1) 
+                                                          + af.shift(B3, 0, 0, 1, 1)
+                                                         ) # (i, j)
+
+            af.eval(self.yee_grid_EM_fields_at_n)
+
+        elif(time_level == 'n_plus_half'):
+
+            E1 = self.cell_centered_EM_fields_at_n_plus_half[0]
+            E2 = self.cell_centered_EM_fields_at_n_plus_half[1]
+            E3 = self.cell_centered_EM_fields_at_n_plus_half[2]
+
+            B1 = self.cell_centered_EM_fields_at_n_plus_half[3]
+            B2 = self.cell_centered_EM_fields_at_n_plus_half[4]
+            B3 = self.cell_centered_EM_fields_at_n_plus_half[5]
+
+            if(fields_to_transform == 'E' or fields_to_transform == None):
+                self.yee_grid_EM_fields_at_n_plus_half[0] = 0.5 * (E1 + af.shift(E1, 0, 0, 1, 0))  # (i, j+1/2)
+                self.yee_grid_EM_fields_at_n_plus_half[1] = 0.5 * (E2 + af.shift(E2, 0, 0, 0, 1))  # (i+1/2, j)
+                self.yee_grid_EM_fields_at_n_plus_half[2] = E3  # (i+1/2, j+1/2)
+
+            if(fields_to_transform == 'B' or fields_to_transform == None):
+                self.yee_grid_EM_fields_at_n_plus_half[3] = 0.5 * (B1 + af.shift(B1, 0, 0, 0, 1)) # (i+1/2, j) 
+                self.yee_grid_EM_fields_at_n_plus_half[4] = 0.5 * (B2 + af.shift(B2, 0, 0, 1, 0)) # (i, j+1/2)
+                self.yee_grid_EM_fields_at_n_plus_half[5] = 0.25 * (  B3 
+                                                                    + af.shift(B3, 0, 0, 1, 0)
+                                                                    + af.shift(B3, 0, 0, 0, 1) 
+                                                                    + af.shift(B3, 0, 0, 1, 1)
+                                                                   ) # (i, j)
+            
+            af.eval(self.yee_grid_EM_fields_at_n_plus_half)
+
+        else:
+
+            E1 = self.cell_centered_EM_fields[0]
+            E2 = self.cell_centered_EM_fields[1]
+            E3 = self.cell_centered_EM_fields[2]
+
+            B1 = self.cell_centered_EM_fields[3]
+            B2 = self.cell_centered_EM_fields[4]
+            B3 = self.cell_centered_EM_fields[5]
+
+            if(fields_to_transform == 'E' or fields_to_transform == None):
+                self.yee_grid_EM_fields[0] = 0.5 * (E1 + af.shift(E1, 0, 0, 1, 0))  # (i, j+1/2)
+                self.yee_grid_EM_fields[1] = 0.5 * (E2 + af.shift(E2, 0, 0, 0, 1))  # (i+1/2, j)
+                self.yee_grid_EM_fields[2] = E3  # (i+1/2, j+1/2)
+
+            if(fields_to_transform == 'B' or fields_to_transform == None):
+                self.yee_grid_EM_fields[3] = 0.5 * (B1 + af.shift(B1, 0, 0, 0, 1)) # (i+1/2, j) 
+                self.yee_grid_EM_fields[4] = 0.5 * (B2 + af.shift(B2, 0, 0, 1, 0)) # (i, j+1/2)
+                self.yee_grid_EM_fields[5] = 0.25 * (  B3 
+                                                    + af.shift(B3, 0, 0, 1, 0)
+                                                    + af.shift(B3, 0, 0, 0, 1) 
+                                                    + af.shift(B3, 0, 0, 1, 1)
+                                                    ) # (i, j)
+            
+            af.eval(self.yee_grid_EM_fields)
+
         return
 
-    def yee_grid_to_cell_centered_grid(self, fields_to_transform = None):
+    def yee_grid_to_cell_centered_grid(self, time_level = None, fields_to_transform = None):
         """
         Making use of the optional fields_to_transform option, one can convert
         the magnetic fields or the electric fields alone. The default
         option is to convert both when the option is passed as None
         """
-        E1_yee = self.yee_grid_EM_fields[0] # (i, j + 1/2)
-        E2_yee = self.yee_grid_EM_fields[1] # (i + 1/2, j)
-        E3_yee = self.yee_grid_EM_fields[2] # (i + 1/2, j + 1/2)
+        if(time_level == 'n'):
 
-        B1_yee = self.yee_grid_EM_fields[3] # (i + 1/2, j)
-        B2_yee = self.yee_grid_EM_fields[4] # (i, j + 1/2)
-        B3_yee = self.yee_grid_EM_fields[5] # (i, j)
+            E1_yee = self.yee_grid_EM_fields_at_n[0] # (i, j + 1/2)
+            E2_yee = self.yee_grid_EM_fields_at_n[1] # (i + 1/2, j)
+            E3_yee = self.yee_grid_EM_fields_at_n[2] # (i + 1/2, j + 1/2)
 
-        # Interpolating at the (i + 1/2, j + 1/2) point of the grid:
+            B1_yee = self.yee_grid_EM_fields_at_n[3] # (i + 1/2, j)
+            B2_yee = self.yee_grid_EM_fields_at_n[4] # (i, j + 1/2)
+            B3_yee = self.yee_grid_EM_fields_at_n[5] # (i, j)
 
-        if(fields_to_transform == 'E' or fields_to_transform == None):
-            self.cell_centered_EM_fields[0] = 0.5 * (E1_yee + af.shift(E1_yee, 0, 0, -1,  0))
-            self.cell_centered_EM_fields[1] = 0.5 * (E2_yee + af.shift(E2_yee, 0, 0,  0, -1))
-            self.cell_centered_EM_fields[2] = E3_yee
+            # Interpolating at the (i + 1/2, j + 1/2) point of the grid:
+            if(fields_to_transform == 'E' or fields_to_transform == None):
+                self.cell_centered_EM_fields_at_n[0] = 0.5 * (E1_yee + af.shift(E1_yee, 0, 0, -1,  0))
+                self.cell_centered_EM_fields_at_n[1] = 0.5 * (E2_yee + af.shift(E2_yee, 0, 0,  0, -1))
+                self.cell_centered_EM_fields_at_n[2] = E3_yee
 
-        if(fields_to_transform == 'B' or fields_to_transform == None):
-            self.cell_centered_EM_fields[3] = 0.5 * (B1_yee + af.shift(B1_yee, 0, 0,  0, -1))
-            self.cell_centered_EM_fields[4] = 0.5 * (B2_yee + af.shift(B2_yee, 0, 0, -1,  0))
-            self.cell_centered_EM_fields[5] = 0.25 * (  B3_yee 
-                                                      + af.shift(B3_yee, 0, 0,  0, -1)
-                                                      + af.shift(B3_yee, 0, 0, -1,  0)
-                                                      + af.shift(B3_yee, 0, 0, -1, -1)
-                                                     )
+            if(fields_to_transform == 'B' or fields_to_transform == None):
+                self.cell_centered_EM_fields_at_n[3] = 0.5 * (B1_yee + af.shift(B1_yee, 0, 0,  0, -1))
+                self.cell_centered_EM_fields_at_n[4] = 0.5 * (B2_yee + af.shift(B2_yee, 0, 0, -1,  0))
+                self.cell_centered_EM_fields_at_n[5] = 0.25 * (  B3_yee 
+                                                               + af.shift(B3_yee, 0, 0,  0, -1)
+                                                               + af.shift(B3_yee, 0, 0, -1,  0)
+                                                               + af.shift(B3_yee, 0, 0, -1, -1)
+                                                              )
 
-        af.eval(self.cell_centered_EM_fields)
+            af.eval(self.cell_centered_EM_fields_at_n)
+
+        elif(time_level == 'n_plus_half'):
+
+            E1_yee = self.yee_grid_EM_fields_at_n_plus_half[0] # (i, j + 1/2)
+            E2_yee = self.yee_grid_EM_fields_at_n_plus_half[1] # (i + 1/2, j)
+            E3_yee = self.yee_grid_EM_fields_at_n_plus_half[2] # (i + 1/2, j + 1/2)
+
+            B1_yee = self.yee_grid_EM_fields_at_n_plus_half[3] # (i + 1/2, j)
+            B2_yee = self.yee_grid_EM_fields_at_n_plus_half[4] # (i, j + 1/2)
+            B3_yee = self.yee_grid_EM_fields_at_n_plus_half[5] # (i, j)
+
+            # Interpolating at the (i + 1/2, j + 1/2) point of the grid:
+            if(fields_to_transform == 'E' or fields_to_transform == None):
+                self.cell_centered_EM_fields_at_n_plus_half[0] = 0.5 * (E1_yee + af.shift(E1_yee, 0, 0, -1,  0))
+                self.cell_centered_EM_fields_at_n_plus_half[1] = 0.5 * (E2_yee + af.shift(E2_yee, 0, 0,  0, -1))
+                self.cell_centered_EM_fields_at_n_plus_half[2] = E3_yee
+
+            if(fields_to_transform == 'B' or fields_to_transform == None):
+                self.cell_centered_EM_fields_at_n_plus_half[3] = 0.5 * (B1_yee + af.shift(B1_yee, 0, 0,  0, -1))
+                self.cell_centered_EM_fields_at_n_plus_half[4] = 0.5 * (B2_yee + af.shift(B2_yee, 0, 0, -1,  0))
+                self.cell_centered_EM_fields_at_n_plus_half[5] = 0.25 * (  B3_yee 
+                                                                         + af.shift(B3_yee, 0, 0,  0, -1)
+                                                                         + af.shift(B3_yee, 0, 0, -1,  0)
+                                                                         + af.shift(B3_yee, 0, 0, -1, -1)
+                                                                        )
+
+            af.eval(self.cell_centered_EM_fields_at_n_plus_half)
+
+        else:
+
+            E1_yee = self.yee_grid_EM_fields[0] # (i, j + 1/2)
+            E2_yee = self.yee_grid_EM_fields[1] # (i + 1/2, j)
+            E3_yee = self.yee_grid_EM_fields[2] # (i + 1/2, j + 1/2)
+
+            B1_yee = self.yee_grid_EM_fields[3] # (i + 1/2, j)
+            B2_yee = self.yee_grid_EM_fields[4] # (i, j + 1/2)
+            B3_yee = self.yee_grid_EM_fields[5] # (i, j)
+
+            # Interpolating at the (i + 1/2, j + 1/2) point of the grid:
+            if(fields_to_transform == 'E' or fields_to_transform == None):
+                self.cell_centered_EM_fields[0] = 0.5 * (E1_yee + af.shift(E1_yee, 0, 0, -1,  0))
+                self.cell_centered_EM_fields[1] = 0.5 * (E2_yee + af.shift(E2_yee, 0, 0,  0, -1))
+                self.cell_centered_EM_fields[2] = E3_yee
+
+            if(fields_to_transform == 'B' or fields_to_transform == None):
+                self.cell_centered_EM_fields[3] = 0.5 * (B1_yee + af.shift(B1_yee, 0, 0,  0, -1))
+                self.cell_centered_EM_fields[4] = 0.5 * (B2_yee + af.shift(B2_yee, 0, 0, -1,  0))
+                self.cell_centered_EM_fields[5] = 0.25 * (  B3_yee 
+                                                          + af.shift(B3_yee, 0, 0,  0, -1)
+                                                          + af.shift(B3_yee, 0, 0, -1,  0)
+                                                          + af.shift(B3_yee, 0, 0, -1, -1)
+                                                         )
+
+            af.eval(self.cell_centered_EM_fields)
+
         return
 
     def compute_electrostatic_fields(self, rho):
@@ -539,7 +626,7 @@ class fields_solver(object):
 
         # ADD SNES BELOW
 
-    def evolve_electrodynamic_fields(self, J1, J2, J3, dt):
+    def evolve_electrodynamic_fields(self, J1, J2, J3, at_n, dt):
         """
         Evolve the fields using FDTD.
         
@@ -579,56 +666,33 @@ class fields_solver(object):
         self.J2 = af.sum(J2, 1)
         self.J3 = af.sum(J3, 1)
 
-        # E_at_n holds (E_x^n , E_y^n, E_z^n)
-        # cell_centered_EM_fields[:3] => (E_x^n , E_y^n, E_z^n)
-        E_at_n = self.cell_centered_EM_fields[:3].copy()
-        # Getting it for the yee grid:
-        E_yee_at_n = self.yee_grid_EM_fields[:3].copy()
+        if(at_n == True):
+            # Evolving:
+            # (B_x^{n-1/2} , B_y^{n-1/2}, B_z^{n-1/2}) -->
+            # (B_x^{n+1/2} , B_y^{n+1/2}, B_z^{n+1/2})
 
-        self.cell_centered_EM_fields_at_n[:3] = E_at_n
-        # Doing the same for Yee Grid fields:
-        self.yee_grid_EM_fields_at_n[:3] = self.yee_grid_EM_fields[:3].copy()
- 
-        # B_at_n_minus_half holds (B_x^{n-1/2} , B_y^{n-1/2}, B_z^{n-1/2})
-        # cell_centered_EM_fields_at_n_plus_half[3:] => (B_x^{n-1/2} , B_y^{n-1/2}, B_z^{n-1/2})
-        # ^ NOTE: This is because cell_centered_EM_fields_at_n_plus_half has not been updated for
-        # this timestep, and holds the information for the previous timestep:
-        B_at_n_minus_half = self.cell_centered_EM_fields_at_n_plus_half[3:].copy()
+            self.yee_grid_EM_fields_at_n_minus_half[3:] = self.yee_grid_EM_fields[3:].copy()
+            fdtd_evolve_B(self, dt)
+            self.yee_grid_EM_fields_at_n_plus_half[3:]  = self.yee_grid_EM_fields[3:].copy()
+            
+            self.yee_grid_EM_fields_at_n[3:] = 0.5 * (  self.yee_grid_EM_fields_at_n_minus_half[3:]
+                                                      + self.yee_grid_EM_fields_at_n_plus_half[3:]
+                                                     )
+            self.yee_grid_to_cell_centered_grid('n', 'B')
 
-        # cell_centered_EM_fields[3:] => (B_x^{n+1/2} , B_y^{n+1/2}, B_z^{n+1/2})
-        B_at_n_plus_half = self.cell_centered_EM_fields[3:].copy()
+        else:
+            # Evolving:
+            # (E_x^{n}   , E_y^{n}  , E_z^{n}) -->
+            # (E_x^{n+1} , E_y^{n+1}, E_z^{n+1})
 
-        # cell_centered_EM_fields_at_n[3:] => (B_x^n , B_y^n, B_z^n)
-        B_at_n = 0.5 * (B_at_n_minus_half + B_at_n_plus_half)
-        self.cell_centered_EM_fields_at_n[3:] = B_at_n
-        # Doing the same for Yee Grid fields:
-        self.yee_grid_EM_fields_at_n[3:] = 0.5 * (  self.yee_grid_EM_fields_at_n_plus_half[3:] 
-                                                  + self.yee_grid_EM_fields[3:]
-                                                 )
+            self.yee_grid_EM_fields_at_n[:3] = self.yee_grid_EM_fields[:3].copy()
+            fdtd_evolve_E(self, dt)
+            self.yee_grid_EM_fields_at_n_plus_one[:3] = self.yee_grid_EM_fields[:3].copy()
 
-        # Now updating cell_centered_EM_fields_at_n_plus_half for this timestep:
-        # cell_centered_EM_fields_at_n_plus_half[3:] => (B_x^{n+1/2} , B_y^{n+1/2}, B_z^{n+1/2})
-        self.cell_centered_EM_fields_at_n_plus_half[3:] = B_at_n_plus_half
-        # Doing the same for Yee Grid fields:
-        self.yee_grid_EM_fields_at_n_plus_half[3:] = self.yee_grid_EM_fields[3:].copy()
-
-        # Evolving:
-        # cell_centered_EM_fields[:3] => (E_x^n ,     E_y^n,     E_z^n) --> 
-        #                                (E_x^{n+1} , E_y^{n+1}, E_z^{n+1})
-        # cell_centered_EM_fields[3:] => (B_x^{n+1/2} , B_y^{n+1/2}, B_z^{n+1/2}) -->
-        #                                (B_x^{n+3/2} , B_y^{n+3/2}, B_z^{n+3/2})
-        fdtd(self, dt)
-        self.yee_grid_to_cell_centered_grid()
-
-        # cell_centered_EM_fields[:3] => (E_x^{n+1} ,  E_y^{n+1},   E_z^{n+1})
-        E_at_n_plus_one = self.cell_centered_EM_fields[:3]
-        
-        # cell_centered_EM_fields_at_n_plus_half[:3] => (E_x^{n+1/2}, E_y^{n+1/2}, E_z^{n+1/2})
-        E_at_n_plus_half = 0.5 * (E_at_n + E_at_n_plus_one)
-        self.cell_centered_EM_fields_at_n_plus_half[:3] = E_at_n_plus_half
-        self.yee_grid_EM_fields_at_n_plus_half[:3] = 0.5 * (  E_yee_at_n
-                                                            + self.yee_grid_EM_fields[:3]
-                                                           )
+            self.yee_grid_EM_fields_at_n_plus_half[:3] = 0.5 * (  self.yee_grid_EM_fields_at_n[:3]
+                                                                + self.yee_grid_EM_fields_at_n_plus_one[:3]
+                                                               )
+            self.yee_grid_to_cell_centered_grid('n_plus_half', 'E')
 
         # Update time elapsed:
         self.time_elapsed += dt
