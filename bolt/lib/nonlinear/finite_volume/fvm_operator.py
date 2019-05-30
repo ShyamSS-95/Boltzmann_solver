@@ -18,7 +18,7 @@ def timestep_fvm(self, dt):
     dt : double
          Time-step size to evolve the system
     """
-    self.f_n_plus_half = self.f_n_plus_half + df_dt_fvm(self.f_n, self, False)
+    self.f_n_plus_half = self.f_n_plus_half + df_dt_fvm(self.f_n, False, self)
     af.eval(self.f_n_plus_half)
 
     # These would be applied to f_n_plus_half
@@ -26,8 +26,7 @@ def timestep_fvm(self, dt):
     # TEMP:NOT NEEDED FOR PERIODIC BCS TESTING
     #self._apply_bcs_f(False)
 
-    # The final argument of 'n' is to tell the solver to use C_p_n and C_q_n
-    self.f_n = self.f_n + df_dt_fvm(self.f_n_plus_half, self, True) * dt
+    self.f_n = self.f_n + df_dt_fvm(self.f_n_plus_half, True, self) * dt
     af.eval(self.f_n)
 
 def update_for_instantaneous_collisions(self, dt):

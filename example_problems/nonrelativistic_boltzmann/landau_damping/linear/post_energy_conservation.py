@@ -184,7 +184,7 @@ pl.subplot(312)
 pl.plot(time_array[1:] / params.t0, electric_energy_data[1:], label = r'$\int \frac{E(i)^2 + E(i + 1)^2}{4} dx$')
 pl.legend(fontsize = 20)
 pl.subplot(313)
-pl.plot(time_array[1:] / params.t0, JE_data[1:], label = r'$\int J(i+1/2) \left(\frac{E(i) + E(i + 1)}{2}\right) dx$')
+pl.plot(time_array[1:] / params.t0, JE_data[1:], label = r'$\int \left(\frac{J(i) E(i) + J(i + 1) E(i + 1)}{2}\right) dx$')
 # pl.plot(time_array[1:] / params.t0, kinetic_energy_data[1:], label = 'Kinetic Energy')
 # pl.plot(time_array[1:] / params.t0, total_energy_data[1:], label = 'Kinetic Energy')
 

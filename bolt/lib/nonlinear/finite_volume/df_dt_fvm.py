@@ -69,7 +69,7 @@ def get_f_cell_edges_q(f, self, at_n):
 
     return
 
-def df_dt_fvm(f, self, at_n, term_to_return = 'all'):
+def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
     """
     Returns the expression for df/dt which is then 
     evolved by a timestepper.
@@ -102,14 +102,22 @@ def df_dt_fvm(f, self, at_n, term_to_return = 'all'):
                  - (top_flux   - bot_flux ) / self.dq2 \
 
         if(    self.physical_system.params.source_enabled == True 
-           and self.physical_system.params.instantaneous_collisions != True
+           and self.physical_system.params.instantaneous_collisions == False
           ):
-            df_dt += self._source(f, self.time_elapsed, 
-                                  self.q1_center, self.q2_center,
-                                  self.p1_center, self.p2_center, self.p3_center, 
-                                  self.compute_moments, 
-                                  self.physical_system.params, False
-                                 ) 
+            if(at_n):
+                df_dt += self._source.source_term_n(f, self.time_elapsed, 
+                                                    self.q1_center, self.q2_center,
+                                                    self.p1_center, self.p2_center, self.p3_center, 
+                                                    self.compute_moments, self.fields_solver,
+                                                    self.physical_system.params
+                                                   ) 
+            else:
+                df_dt += self._source.source_term_n_plus_half(f, self.time_elapsed, 
+                                                              self.q1_center, self.q2_center,
+                                                              self.p1_center, self.p2_center, self.p3_center, 
+                                                              self.compute_moments, self.fields_solver,
+                                                              self.physical_system.params
+                                                             ) 
 
     if(    self.physical_system.params.solver_method_in_p == 'FVM' 
        and self.physical_system.params.fields_enabled == True
@@ -117,50 +125,45 @@ def df_dt_fvm(f, self, at_n, term_to_return = 'all'):
         if(self.physical_system.params.fields_type == 'electrostatic'):
             if(self.physical_system.params.fields_solver == 'fft'):
                 rho = multiply(self.physical_system.params.charge,
-                                self.compute_moments('density', f = f)
-                                )
+                               self.compute_moments('density', f = f)
+                              )
 
                 self.fields_solver.compute_electrostatic_fields(rho)
 
         if(self.physical_system.params.fields_type == 'electrodynamic'):
             J1 = multiply(self.physical_system.params.charge,
-                            self.compute_moments('mom_v1_bulk', f = self.f_q1_left_q2_center)
-                            ) # (i, j + 1/2)
+                          self.compute_moments('mom_v1_bulk', f = self.f_q1_left_q2_center)
+                         ) # (i, j + 1/2)
 
             J2 = multiply(self.physical_system.params.charge,
-                            self.compute_moments('mom_v2_bulk', f = self.f_q1_center_q2_bot)
-                            ) # (i + 1/2, j)
+                          self.compute_moments('mom_v2_bulk', f = self.f_q1_center_q2_bot)
+                         ) # (i + 1/2, j)
 
             J3 = multiply(self.physical_system.params.charge, 
-                            self.compute_moments('mom_v3_bulk', f = f)
-                            ) # (i + 1/2, j + 1/2)
+                          self.compute_moments('mom_v3_bulk', f = f)
+                         ) # (i + 1/2, j + 1/2)
 
             self.fields_solver.evolve_electrodynamic_fields(J1, J2, J3, at_n, self.dt)
 
         if(self.physical_system.params.energy_conserving == False):
-
             # Fields solver object is passed to C_p where the get_fields method
-            # is used to get the electromagnetic fields. The fields returned are
-            # located at the center of the cell. The fields returned are in accordance with
-            # the time level of the simulation. i.e:
-            # On the n-th step it returns (E1^{n}, E2^{n}, E3^{n}, B1^{n}, B2^{n}, B3^{n})
-            # On the (n+1/2)-th step it returns (E1^{n+1/2}, E2^{n+1/2}, E3^{n+1/2}, B1^{n+1/2}, B2^{n+1/2}, B3^{n+1/2})
+            # is used to get the electromagnetic fields.
             self._C_p1_left_at_q1_center_q2_center \
-            = af.broadcast(self._C_p, self.time_elapsed,
+            = af.broadcast(self._C_p_n_plus_half, self.time_elapsed,
                            self.q1_center, self.q2_center,
                            self.p1_left, self.p2_left, self.p3_left,
                            self.fields_solver, self.physical_system.params
                           )[0]
 
             self._C_p2_bot_at_q1_center_q2_center \
-            = af.broadcast(self._C_p, self.time_elapsed,
+            = af.broadcast(self._C_p_n_plus_half, self.time_elapsed,
                            self.q1_center, self.q2_center,
                            self.p1_bottom, self.p2_bottom, self.p3_bottom,
                            self.fields_solver, self.physical_system.params
                           )[1]
 
             self._C_p3_back_at_q1_center_q2_center \
-            = af.broadcast(self._C_p, self.time_elapsed,
+            = af.broadcast(self._C_p_n_plus_half, self.time_elapsed,
                            self.q1_center, self.q2_center,
                            self.p1_back, self.p2_back, self.p3_back,
                            self.fields_solver, self.physical_system.params
@@ -263,9 +266,6 @@ def df_dt_fvm(f, self, at_n, term_to_return = 'all'):
                 self._C_p3_back_at_q1_center_q2_center \
                 = af.broadcast(self._C_p_n_plus_half, *args_p_back)[2]
 
-            # Alternating upon each call:
-            self.fields_solver.at_n = not(self.fields_solver.at_n)
-
             # Converting all variables to p-expanded:(p1, p2, p3, s * q1 * q2)
             self._C_p1_left_at_q1_left_q2_center   = self._convert_to_p_expanded(self._C_p1_left_at_q1_left_q2_center)
             self._C_p2_bot_at_q1_center_q2_bot     = self._convert_to_p_expanded(self._C_p2_bot_at_q1_center_q2_bot)
@@ -367,13 +367,11 @@ def df_dt_fvm(f, self, at_n, term_to_return = 'all'):
 
             d_flux_p3_dp3 = d_flux_p3_at_q1_center_q2_center_dp3
 
+            # J1 = multiply(self.physical_system.params.charge,
+            #               self.compute_moments('mom_v1_bulk', f = self._convert_to_q_expanded(self.f_q1_left_q2_center))
+            #              ) # (i, j + 1/2)
 
-            J1 = multiply(self.physical_system.params.charge,
-                          self.compute_moments('mom_v1_bulk', f = self._convert_to_q_expanded(self.f_q1_left_q2_center))
-                         ) # (i, j + 1/2)
-
-            E1, E2, E3, B1, B2, B3 = self.fields_solver.get_fields('left_center')
-
+            # E1, E2, E3, B1, B2, B3 = self.fields_solver.get_fields('left_center')
             # import pylab as pl
             # pl.style.use('latexplot')
             # pl.plot(af.flat(self.compute_moments('energy', f = self._convert_to_q_expanded(d_flux_p1_at_q1_left_q2_center_dp1))[0, 0, :, 0]), label = r'$\int \frac{eE|v|^2}{2} \frac{\partial f}{\partial v} dv$')

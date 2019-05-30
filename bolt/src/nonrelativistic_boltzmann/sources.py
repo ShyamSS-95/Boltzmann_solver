@@ -6,7 +6,7 @@
 import numpy as np
 import arrayfire as af
 
-from bolt.lib.utils.broadcasted_primitive_operations import multiply
+from bolt.lib.utils.broadcasted_primitive_operations import multiply, add
 
 # Using af.broadcast, since v1, v2, v3 are of size (1, 1, Nv1*Nv2*Nv3)
 # All moment quantities are of shape (Nq1, Nq2)
@@ -101,6 +101,7 @@ def source_term_n(f, t, q1, q2, v1, v2, v3, moments,
             This can be used to inject other functions/attributes into the function
     """
     n = moments('density', f)
+    e = params.charge
     m = params.mass
 
     # Floor used to avoid 0/0 limit:
@@ -121,12 +122,12 @@ def source_term_n(f, t, q1, q2, v1, v2, v3, moments,
 
     C_f = -(f - f_MB) / tau
 
-    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields()
+    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields('center', True)
 
     # Source terms arising from formulation:
-    src_p1 = (e/m) * (E1 + v2 * B3 - v3 * B2) * v1 * f
-    src_p2 = (e/m) * (E2 + v3 * B1 - v1 * B3) * v2 * f
-    src_p3 = (e/m) * (E3 + v1 * B2 - v2 * B1) * v3 * f
+    src_p1 = multiply(multiply(e/m, add(E1, multiply(v2, B3) - multiply(v3, B2))), v1) * f
+    src_p2 = multiply(multiply(e/m, add(E2, multiply(v3, B1) - multiply(v1, B3))), v2) * f
+    src_p3 = multiply(multiply(e/m, add(E3, multiply(v1, B2) - multiply(v2, B1))), v3) * f
 
     return(C_f + src_p1 + src_p2 + src_p3)
 

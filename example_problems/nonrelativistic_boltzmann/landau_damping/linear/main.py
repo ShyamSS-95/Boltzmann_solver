@@ -13,7 +13,7 @@ import params
 import initialize
 
 import bolt.src.nonrelativistic_boltzmann.advection_terms as advection_terms
-import bolt.src.nonrelativistic_boltzmann.collision_operator as collision_operator
+import bolt.src.nonrelativistic_boltzmann.sources as sources
 import bolt.src.nonrelativistic_boltzmann.moments as moments
 
 # Defining the physical system to be solved:
@@ -22,7 +22,7 @@ system = physical_system(domain,
                          params,
                          initialize,
                          advection_terms,
-                         collision_operator.BGK,
+                         sources,
                          moments
                         )
 
@@ -46,7 +46,7 @@ E_data_nls = np.zeros([time_array.size])
 n_data_nls[0] = af.max(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g])
 # n_data_ls[0]  = af.max(ls.compute_moments('density'))
 
-E_data_nls[0] = af.max(nls.fields_solver.cell_centered_EM_fields[:, :, N_g:-N_g, N_g:-N_g])
+# E_data_nls[0] = af.max(nls.fields_solver.cell_centered_EM_fields[:, :, N_g:-N_g, N_g:-N_g])
 
 # E1_ls = af.real(0.5 * (ls.N_q1 * ls.N_q2) 
 #                     * ifft2(ls.fields_solver.E1_hat)
@@ -56,7 +56,7 @@ E_data_nls[0] = af.max(nls.fields_solver.cell_centered_EM_fields[:, :, N_g:-N_g,
 
 nls.dump_distribution_function('data_f0')
 nls.dump_moments('dump_moments/t=0.000')
-nls.dump_EM_fields('dump_fields/t=0.000')
+# nls.dump_EM_fields('dump_fields/t=0.000')
 
 print('Error in Density')
 print(af.sum(af.abs(   nls.compute_moments('density') 
@@ -72,7 +72,6 @@ print(af.sum(af.abs(   nls.compute_moments('mom_v1_bulk') / nls.compute_moments(
             )
      )
 
-
 for time_index, t0 in enumerate(time_array[1:]):
 
     print('Computing For Time =', t0)
@@ -81,9 +80,10 @@ for time_index, t0 in enumerate(time_array[1:]):
 
     n_data_nls[time_index + 1] = af.max(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g])
     # n_data_ls[time_index + 1]  = af.max(ls.compute_moments('density'))
-
-    E_data_nls[time_index + 1] = \
-        af.max(nls.fields_solver.cell_centered_EM_fields[:, :, N_g:-N_g, N_g:-N_g])
+    print(n_data_nls[time_index + 1])
+    # E_data_nls[time_index + 1] = \
+    #     af.max(nls.fields_solver.cell_centered_EM_fields[:, :, N_g:-N_g, N_g:-N_g])
+    # print(n_data_nls[time_index + 1])
 
     # E1_ls = af.real(0.5 * (ls.N_q1 * ls.N_q2) 
     #                     * ifft2(ls.fields_solver.E1_hat)
@@ -93,7 +93,7 @@ for time_index, t0 in enumerate(time_array[1:]):
 
     nls.dump_moments('dump_moments/t=' + '%.3f'%t0)
     nls.dump_moments('dump_moments2/t=' + '%.3f'%t0, 'left_center')
-    nls.dump_EM_fields('dump_fields/t=' + '%.3f'%t0)
+    # nls.dump_EM_fields('dump_fields/t=' + '%.3f'%t0)
 
 nls.dump_distribution_function('data_f')
 

@@ -208,7 +208,7 @@ def C_p_n(t, q1, q2, v1, v2, v3,
     e = params.charge
     m = params.mass
 
-    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields(field_locations)
+    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields(field_locations, True)
 
     C_p1 = (v1**2 / 2) * (e/m) * (E1 + v2 * B3 - v3 * B2)
     C_p2 = (v2**2 / 2) * (e/m) * (E2 + v3 * B1 - v1 * B3)
@@ -251,7 +251,7 @@ def C_p_n_plus_half(t, q1, q2, v1, v2, v3,
     e = params.charge
     m = params.mass
 
-    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields(field_locations)
+    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields(field_locations, False)
 
     C_p1 = (e/m) * (E1 + v2 * B3 - v3 * B2)
     C_p2 = (e/m) * (E2 + v3 * B1 - v1 * B3)

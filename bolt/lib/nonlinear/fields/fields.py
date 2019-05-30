@@ -698,7 +698,7 @@ class fields_solver(object):
         self.time_elapsed += dt
         return
 
-    def get_fields(self, fields_location):
+    def get_fields(self, fields_location, at_n):
         """
         Returns the fields value as held by the
         solver in it's current state.
@@ -717,7 +717,7 @@ class fields_solver(object):
 
             if(fields_location == 'center'):
 
-                if(self.at_n == True):
+                if(at_n == True):
 
                     E1 = self.cell_centered_EM_fields_at_n[0]
                     E2 = self.cell_centered_EM_fields_at_n[1]
@@ -740,7 +740,7 @@ class fields_solver(object):
             # Gets fields at the center of the left face: i.e (i, j + 1/2)
             elif(fields_location == 'left_center'):
 
-                if(self.at_n == True):
+                if(at_n == True):
 
                     E1 = self.yee_grid_EM_fields_at_n[0] # (i, j + 1/2)
                     
@@ -795,7 +795,7 @@ class fields_solver(object):
             # Gets fields at the center of the bottom face: i.e (i+1/2, j)
             elif(fields_location == 'center_bottom'):
 
-                if(self.at_n == True):
+                if(at_n == True):
 
                     E1 = 0.25 * (  self.yee_grid_EM_fields_at_n[0] # (i, j+1/2)
                                  + af.shift(self.yee_grid_EM_fields_at_n[0], 0, 0,  0, 1)  # (i, j-1/2)
