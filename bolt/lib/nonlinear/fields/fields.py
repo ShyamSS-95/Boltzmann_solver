@@ -217,10 +217,6 @@ class fields_solver(object):
 
         PETSc.Object.setName(self._glob_fields, 'EM_fields')
         
-        # Alternating upon each call to get_fields for FVM:
-        # This ensures that the fields are staggerred correctly in time:
-        self.at_n = True
-
         # Summing for all species:
         rho_initial = af.sum(rho_initial, 1)
         self._initialize(rho_initial)

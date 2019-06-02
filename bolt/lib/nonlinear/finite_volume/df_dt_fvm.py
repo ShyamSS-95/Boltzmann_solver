@@ -30,7 +30,7 @@ d(f_{i+1/2, j+1/2})/dt  = ((- (C_q1 * f)_{i + 1, j + 1/2} + (C_q1 * f)_{i, j + 1
 The same concept is extended to p-space as well.                          
 """
 
-def get_f_cell_edges_q(f, self, at_n):
+def get_f_cell_edges_q(f, at_n, self):
 
     # Giving shorter name reference:
     reconstruction_in_q = self.physical_system.params.reconstruction_method_in_q
@@ -63,7 +63,6 @@ def get_f_cell_edges_q(f, self, at_n):
         self._C_q1 = af.broadcast(self._C_q_n_plus_half, *args_left_center)[0]
         self._C_q2 = af.broadcast(self._C_q_n_plus_half, *args_center_bot)[1]
 
-
     self.f_q1_left_q2_center = riemann_solver(self, f_left_minus_eps, f_left_plus_eps, self._C_q1)
     self.f_q1_center_q2_bot  = riemann_solver(self, f_bot_minus_eps, f_bot_plus_eps, self._C_q2)
 
@@ -90,7 +89,7 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
 
     if(self.physical_system.params.solver_method_in_q == 'FVM'):
 
-        get_f_cell_edges_q(f, self, at_n)
+        get_f_cell_edges_q(f, at_n, self)
 
         left_flux = multiply(self._C_q1, self.f_q1_left_q2_center)
         bot_flux  = multiply(self._C_q2, self.f_q1_center_q2_bot)

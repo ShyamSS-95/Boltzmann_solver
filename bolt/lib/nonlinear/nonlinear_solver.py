@@ -406,17 +406,22 @@ class nonlinear_solver(object):
         self._A_q = physical_system.A_q
         self._A_p = physical_system.A_p
 
-        self._C_q_n = physical_system.C_q_n
-        self._C_p_n = physical_system.C_p_n
-        
-        self._C_q_n_plus_half = physical_system.C_q_n_plus_half
-        self._C_p_n_plus_half = physical_system.C_p_n_plus_half
+        if(self.physical_system.params.energy_conserving):
+            self._C_q_n = physical_system.C_q_n
+            self._C_p_n = physical_system.C_p_n
+            
+            self._C_q_n_plus_half = physical_system.C_q_n_plus_half
+            self._C_p_n_plus_half = physical_system.C_p_n_plus_half
+
+        else:
+            self._C_p_n_plus_half = physical_system.C_q_n_plus_half
+            self._C_p_n_plus_half = physical_system.C_p_n_plus_half
 
         # Source/Sink term:
         self._source = physical_system.source
 
         # Getting f at the cell edges:
-        get_f_cell_edges_q(self.f_n, self, True)
+        get_f_cell_edges_q(self.f_n, True, self)
 
     def _convert_to_q_expanded(self, array):
         """
@@ -500,7 +505,9 @@ class nonlinear_solver(object):
                                       self.p1_center, self.p2_center, self.p3_center, params
                                      )
 
+        # This is f(0):
         self.f_n           = self.f_initial.copy()
+        # It is assumed that f(-1/2) = f(0)
         self.f_n_plus_half = self.f_initial.copy()
 
         if(self.physical_system.params.fields_enabled):

@@ -23,8 +23,7 @@ def timestep_fvm(self, dt):
 
     # These would be applied to f_n_plus_half
     self._communicate_f(False)
-    # TEMP:NOT NEEDED FOR PERIODIC BCS TESTING
-    #self._apply_bcs_f(False)
+    self._apply_bcs_f(False)
 
     self.f_n = self.f_n + df_dt_fvm(self.f_n_plus_half, True, self) * dt
     af.eval(self.f_n)
@@ -48,8 +47,7 @@ def op_fvm(self, dt):
     
     # These would be applied to f_n
     self._communicate_f(True)
-    # TEMP:NOT NEEDED FOR PERIODIC BCS TESTING
-    #self._apply_bcs_f(True)
+    self._apply_bcs_f(True)
 
     if(self.physical_system.params.instantaneous_collisions == True):
         split.strang(self, timestep_fvm, update_for_instantaneous_collisions, dt)
