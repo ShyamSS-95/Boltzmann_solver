@@ -88,8 +88,8 @@ def C_q_n(t, q1, q2, v1, v2, v3, params):
             This can be used to inject other functions/attributes into the function
 
     """
-    C_q1 = v1**3 / 2
-    C_q2 = v2**3 / 2
+    C_q1 = v1 * (v1**2 + v2**2 + v3**2)
+    C_q2 = v2 * (v1**2 + v2**2 + v3**2)
 
     return (C_q1, C_q2)
 
@@ -210,9 +210,9 @@ def C_p_n(t, q1, q2, v1, v2, v3,
 
     E1, E2, E3, B1, B2, B3 = fields_solver.get_fields(field_locations, True)
 
-    C_p1 = (v1**2 / 2) * (e/m) * (E1 + v2 * B3 - v3 * B2)
-    C_p2 = (v2**2 / 2) * (e/m) * (E2 + v3 * B1 - v1 * B3)
-    C_p3 = (v3**2 / 2) * (e/m) * (E3 + v1 * B2 - v2 * B1)
+    C_p1 = (v1**2 + v2**2 + v3**2) * (e/m) * (E1 + v2 * B3 - v3 * B2)
+    C_p2 = (v1**2 + v2**2 + v3**2) * (e/m) * (E2 + v3 * B1 - v1 * B3)
+    C_p3 = (v1**2 + v2**2 + v3**2) * (e/m) * (E3 + v1 * B2 - v2 * B1)
 
     return (C_p1, C_p2, C_p3)
 

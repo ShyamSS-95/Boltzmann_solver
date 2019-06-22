@@ -18,10 +18,10 @@ def timestep_fvm(self, dt):
     dt : double
          Time-step size to evolve the system
     """
-    self.f_n_plus_half = self.f_n_plus_half + df_dt_fvm(self.f_n, False, self)
+    self.f_n_plus_half = self.f_n_plus_half + df_dt_fvm(self.f_n, False, self) * dt
     af.eval(self.f_n_plus_half)
 
-    # These would be applied to f_n_plus_half
+    # These would be applied to f_n_plus_half by setting the at_n flag to False
     self._communicate_f(False)
     self._apply_bcs_f(False)
 
@@ -45,7 +45,7 @@ def op_fvm(self, dt):
     if(self.performance_test_flag == True):
         tic = af.time()
     
-    # These would be applied to f_n
+    # These would be applied to f_n by setting the at_n to True
     self._communicate_f(True)
     self._apply_bcs_f(True)
 
