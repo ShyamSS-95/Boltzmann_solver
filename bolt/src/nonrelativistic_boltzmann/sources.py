@@ -122,16 +122,16 @@ def source_term_n(f, t, q1, q2, v1, v2, v3, moments,
 
     C_f = -(f - f_MB) / tau
 
-    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields('left_center', True)
-    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields('left_center', True)
-    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields('left_center', True)
+    E1_lc, E2_lc, E3_lc, B1_lc, B2_lc, B3_lc = fields_solver.get_fields('left_center', True)
+    E1_cb, E2_cb, E3_cb, B1_cb, B2_cb, B3_cb = fields_solver.get_fields('center_bot', True)
+    E1_cc, E2_cc, E3__cccc, B1_cc, B2_cc, B3_cc = fields_solver.get_fields('center', True)
 
     # Source terms arising from formulation:
     src_p1 = 0.5 * multiply(multiply(e/m, add(E1, multiply(v2, B3) - multiply(v3, B2))), v1) * f
     src_p2 = 0.5 * multiply(multiply(e/m, add(E2, multiply(v3, B1) - multiply(v1, B3))), v2) * f
     src_p3 = 0.5 * multiply(multiply(e/m, add(E3, multiply(v1, B2) - multiply(v2, B1))), v3) * f
 
-    return(C_f + 2 * (src_p1 + src_p2 + src_p3))
+    return(C_f + src_p1 + src_p2 + src_p3)
 
 def source_term_n_plus_half(f, t, q1, q2, v1, v2, v3, moments, 
                             fields_solver, params

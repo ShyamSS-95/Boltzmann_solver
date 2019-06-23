@@ -25,7 +25,7 @@ def timestep_fvm(self, dt):
     self._communicate_f(False)
     self._apply_bcs_f(False)
 
-    self.f_n = self.f_n + df_dt_fvm(self.f_n_plus_half, True, self) * dt
+    self.f_n = self.f_n + df_dt_fvm(self.f_n_plus_half, True, self) / v**2 * dt
     af.eval(self.f_n)
 
 def update_for_instantaneous_collisions(self, dt):
