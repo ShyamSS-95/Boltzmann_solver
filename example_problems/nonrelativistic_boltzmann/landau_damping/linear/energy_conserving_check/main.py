@@ -62,20 +62,24 @@ energy_variation = np.zeros(time_array.size)
 for time_index, t0 in enumerate(time_array[1:]):
 
     # Getting total mass and energy of the system:
-    n  = nls.compute_moments('density', f = nls.f_n_plus_half)
-    E  = nls.compute_moments('energy')
-    E1 = nls.fields_solver.yee_grid_EM_fields[0]
+#     n  = nls.compute_moments('density', f = nls.f_n_plus_half)
+#     E  = nls.compute_moments('energy')
+#     E1 = nls.fields_solver.yee_grid_EM_fields[0]
 
-    kinetic_energy  = np.sum(E)
-    electric_energy = np.sum(E1**2 + af.shift(E1, 0, 0, -1)**2) * params.eps / 4
+#     kinetic_energy  = np.sum(E)
+#     electric_energy = np.sum(E1**2 + af.shift(E1, 0, 0, -1)**2) * params.eps / 4
 
-    mass_variation[time_index]   = np.sum(n)
-    energy_variation[time_index] = kinetic_energy + electric_energy
+#     mass_variation[time_index]   = np.sum(n)
+#     energy_variation[time_index] = kinetic_energy + electric_energy
 
     print('Computing For Time =', t0)
     nls.strang_timestep(dt)
 
-    print(mass_variation[time_index])
-    print(energy_variation[time_index])
+#     print(mass_variation[time_index])
+#     print(energy_variation[time_index])
 
-    n_data_nls[time_index + 1] = af.max(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g])
+    n_data_nls[time_index + 1] = af.max(nls.compute_moments('density', nls.f_n_plus_half)[:, :, N_g:-N_g, N_g:-N_g])
+
+import pylab as pl
+pl.plot(time_array, n_data_nls)
+pl.show()

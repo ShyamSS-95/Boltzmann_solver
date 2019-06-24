@@ -43,9 +43,9 @@ def communicate_f(self, at_n):
 
     # Global value is non-inclusive of the ghost-zones:
     if(at_n == True):
-        af.flat(self.f_n[:, :, N_g:-N_g, N_g:-N_g]).to_ndarray(self._glob_f_array)
+        af.flat(self.f_n.center[:, :, N_g:-N_g, N_g:-N_g]).to_ndarray(self._glob_f_array)
     else:
-        af.flat(self.f_n_plus_half[:, :, N_g:-N_g, N_g:-N_g]).to_ndarray(self._glob_f_array)
+        af.flat(self.f_n_plus_half.center[:, :, N_g:-N_g, N_g:-N_g]).to_ndarray(self._glob_f_array)
 
     # The following function takes care of interzonal communications
     # Additionally, it also automatically applies periodic BCs when necessary

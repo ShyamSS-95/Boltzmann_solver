@@ -100,18 +100,18 @@ def source_term_n(f, t, q1, q2, v1, v2, v3, moments,
     params: The parameters file/object that is originally declared by the user.
             This can be used to inject other functions/attributes into the function
     """
-    n = moments('density', f)
+    n = moments('density', f.center)
     e = params.charge
     m = params.mass
 
     # Floor used to avoid 0/0 limit:
     eps = 1e-30
 
-    v1_bulk = moments('mom_v1_bulk', f) / (n + eps)
-    v2_bulk = moments('mom_v2_bulk', f) / (n + eps)
-    v3_bulk = moments('mom_v3_bulk', f) / (n + eps)
+    v1_bulk = moments('mom_v1_bulk', f.center) / (n + eps)
+    v2_bulk = moments('mom_v2_bulk', f.center) / (n + eps)
+    v3_bulk = moments('mom_v3_bulk', f.center) / (n + eps)
 
-    T = (1 / params.p_dim) * (  2 * multiply(moments('energy', f), m)
+    T = (1 / params.p_dim) * (  2 * multiply(moments('energy', f.center), m)
                                   - multiply(n, m) * v1_bulk**2
                                   - multiply(n, m) * v2_bulk**2
                                   - multiply(n, m) * v3_bulk**2
@@ -120,16 +120,22 @@ def source_term_n(f, t, q1, q2, v1, v2, v3, moments,
     f_MB = f0(v1, v2, v3, n, T, v1_bulk, v2_bulk, v3_bulk, params)
     tau  = params.tau(q1, q2, v1, v2, v3)
 
-    C_f = -(f - f_MB) / tau
+    C_f = -(f.center - f_MB) / tau
 
-    E1_lc, E2_lc, E3_lc, B1_lc, B2_lc, B3_lc = fields_solver.get_fields('left_center', True)
-    E1_cb, E2_cb, E3_cb, B1_cb, B2_cb, B3_cb = fields_solver.get_fields('center_bot', True)
-    E1_cc, E2_cc, E3__cccc, B1_cc, B2_cc, B3_cc = fields_solver.get_fields('center', True)
+    E1_lc, E2_lc, E3_lc, B1_lc, B2_lc, B3_lc = fields_solver.get_fields('left_center', False)
+    E1_cb, E2_cb, E3_cb, B1_cb, B2_cb, B3_cb = fields_solver.get_fields('center_bottom', False)
+    E1_cc, E2_cc, E3_cc, B1_cc, B2_cc, B3_cc = fields_solver.get_fields('center', False)
 
     # Source terms arising from formulation:
-    src_p1 = 0.5 * multiply(multiply(e/m, add(E1, multiply(v2, B3) - multiply(v3, B2))), v1) * f
-    src_p2 = 0.5 * multiply(multiply(e/m, add(E2, multiply(v3, B1) - multiply(v1, B3))), v2) * f
-    src_p3 = 0.5 * multiply(multiply(e/m, add(E3, multiply(v1, B2) - multiply(v2, B1))), v3) * f
+    # 2e(E_x + v_y B_z - v_z B_y)v_x f / m + 2e(E_y + v_z B_x - v_x B_z)v_y f / m + 2e(E_z + v_x B_y - v_y B_x)v_z f / m
+    src_p1 =   multiply(multiply(e/m, add(E1, multiply(v2, B3) - multiply(v3, B2))), v1) * f \
+             + multiply(multiply(e/m, add(E1, multiply(v2, B3) - multiply(v3, B2))), v1) * f
+    
+    src_p2 =   multiply(multiply(e/m, add(E2, multiply(v3, B1) - multiply(v1, B3))), v2) * f \
+             + multiply(multiply(e/m, add(E2, multiply(v3, B1) - multiply(v1, B3))), v2) * f
+
+    src_p3 =   multiply(multiply(e/m, add(E3, multiply(v1, B2) - multiply(v2, B1))), v3) * f \
+             + multiply(multiply(e/m, add(E3, multiply(v1, B2) - multiply(v2, B1))), v3) * f
 
     return(C_f + src_p1 + src_p2 + src_p3)
 
@@ -166,17 +172,17 @@ def source_term_n_plus_half(f, t, q1, q2, v1, v2, v3, moments,
     params: The parameters file/object that is originally declared by the user.
             This can be used to inject other functions/attributes into the function
     """
-    n = moments('density', f)
+    n = moments('density', f.center)
     m = params.mass
 
     # Floor used to avoid 0/0 limit:
     eps = 1e-30
 
-    v1_bulk = moments('mom_v1_bulk', f) / (n + eps)
-    v2_bulk = moments('mom_v2_bulk', f) / (n + eps)
-    v3_bulk = moments('mom_v3_bulk', f) / (n + eps)
+    v1_bulk = moments('mom_v1_bulk', f.center) / (n + eps)
+    v2_bulk = moments('mom_v2_bulk', f.center) / (n + eps)
+    v3_bulk = moments('mom_v3_bulk', f.center) / (n + eps)
 
-    T = (1 / params.p_dim) * (  2 * multiply(moments('energy', f), m)
+    T = (1 / params.p_dim) * (  2 * multiply(moments('energy', f.center), m)
                                   - multiply(n, m) * v1_bulk**2
                                   - multiply(n, m) * v2_bulk**2
                                   - multiply(n, m) * v3_bulk**2
@@ -185,6 +191,6 @@ def source_term_n_plus_half(f, t, q1, q2, v1, v2, v3, moments,
     f_MB = f0(v1, v2, v3, n, T, v1_bulk, v2_bulk, v3_bulk, params)
     tau  = params.tau(q1, q2, v1, v2, v3)
 
-    C_f = -(f - f_MB) / tau
+    C_f = -(f.center - f_MB) / tau
 
     return(C_f)

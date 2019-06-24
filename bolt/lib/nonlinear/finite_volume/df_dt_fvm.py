@@ -77,8 +77,8 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
     ----------
 
     f : af.Array
-        Array of the distribution function at which df_dt is to 
-        be evaluated.
+        Array of the distribution function at which is used
+        to evaluate the fluxes.
     """ 
     
     # Giving shorter name reference:
@@ -88,7 +88,7 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
     df_dt = 0
 
     if(self.physical_system.params.solver_method_in_q == 'FVM'):
-
+        # This method is used to set C_q1, C_q2, f_q1_left_q2_center, f_q1_center_q2_bot:
         get_f_cell_edges_q(f, at_n, self)
 
         left_flux = multiply(self._C_q1, self.f_q1_left_q2_center)
@@ -104,14 +104,14 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
            and self.physical_system.params.instantaneous_collisions == False
           ):
             if(at_n):
-                df_dt += self._source.source_term_n(f, self.time_elapsed, 
+                df_dt += self._source.source_term_n(self.f_n_plus_half, self.time_elapsed, 
                                                     self.q1_center, self.q2_center,
                                                     self.p1_center, self.p2_center, self.p3_center, 
                                                     self.compute_moments, self.fields_solver,
                                                     self.physical_system.params
                                                    ) 
             else:
-                df_dt += self._source.source_term_n_plus_half(f, self.time_elapsed, 
+                df_dt += self._source.source_term_n_plus_half(self.f_n, self.time_elapsed, 
                                                               self.q1_center, self.q2_center,
                                                               self.p1_center, self.p2_center, self.p3_center, 
                                                               self.compute_moments, self.fields_solver,

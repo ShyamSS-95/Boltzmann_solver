@@ -18,15 +18,25 @@ def timestep_fvm(self, dt):
     dt : double
          Time-step size to evolve the system
     """
-    self.f_n_plus_half = self.f_n_plus_half + df_dt_fvm(self.f_n, False, self) * dt
-    af.eval(self.f_n_plus_half)
+    if(self.physical_system.params.energy_conserving == True):
+        self.f_n_plus_half.center = self.f_n_plus_half.center + df_dt_fvm(self.f_n.center, False, self) * dt
+        af.eval(self.f_n_plus_half.center)
 
-    # These would be applied to f_n_plus_half by setting the at_n flag to False
-    self._communicate_f(False)
-    self._apply_bcs_f(False)
+        # These would be applied to f_n_plus_half by setting the at_n flag to False
+        self._communicate_f(False)
+        self._apply_bcs_f(False)
 
-    self.f_n = self.f_n + df_dt_fvm(self.f_n_plus_half, True, self) / v**2 * dt
-    af.eval(self.f_n)
+        self.f_n.center = self.f_n + multiply(df_dt_fvm(self.f_n_plus_half.center, True, self), 1 / self.p_center_squared) * dt
+        af.eval(self.f_n.center)
+
+    else:
+        f_initial          = self.f_n_plus_half.center.copy()
+        self.f_n_plus_half = self.f_n_plus_half + df_dt_fvm(self.f_n_plus_half, False, self) * (dt / 2)
+    
+        self._communicate_f(False)
+        self._apply_bcs_f(False)
+
+        self.f_n_plus_half = f_initial + df_dt_fvm(self.f_n_plus_half, False, self) * dt
 
 def update_for_instantaneous_collisions(self, dt):
     
@@ -41,13 +51,16 @@ def update_for_instantaneous_collisions(self, dt):
     return
 
 def op_fvm(self, dt):
-
     if(self.performance_test_flag == True):
         tic = af.time()
     
-    # These would be applied to f_n by setting the at_n to True
-    self._communicate_f(True)
-    self._apply_bcs_f(True)
+    if(self.physical_system.params.energy_conserving == True):
+        # These would be applied to f_n by setting the at_n flag to True
+        self._communicate_f(True)
+        self._apply_bcs_f(True)
+    else:
+        self._communicate_f(False)
+        self._apply_bcs_f(False)
 
     if(self.physical_system.params.instantaneous_collisions == True):
         split.strang(self, timestep_fvm, update_for_instantaneous_collisions, dt)
