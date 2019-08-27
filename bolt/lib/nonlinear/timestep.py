@@ -32,8 +32,8 @@ def check_divergence(self):
     undefined.
     """
 
-    if(   af.any_true(af.isinf(self.f_n))
-       or af.any_true(af.isnan(self.f_n))
+    if(   af.any_true(af.isinf(self.f))
+       or af.any_true(af.isnan(self.f))
       ):
         raise SystemExit('Solver Diverging!')
 

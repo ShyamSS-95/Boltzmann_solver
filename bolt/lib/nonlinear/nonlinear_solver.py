@@ -56,17 +56,6 @@ from bolt.lib.utils.calculate_p import \
 from .compute_moments import compute_moments as compute_moments_imported
 from .fields.fields import fields_solver
 
-# The distribution function data is going to be
-# stored under this class. It stores 3 af.Arrays
-# containing the data at the left center, center bottom
-# and the center of the cell in consideration:
-class distribution_function(object):
-    def __init__(self, f_center):
-        self.center        = f_center
-        # Initializing with zero:
-        self.left_center   = 0 * f_center
-        self.center_bottom = 0 * f_center
-
 class nonlinear_solver(object):
     """
     An instance of this class' attributes contains methods which are used
@@ -382,7 +371,7 @@ class nonlinear_solver(object):
 
         # Applying dirichlet boundary conditions:        
         # Arguments that are passing to the called functions:
-        args = (self.f_n.center, self.time_elapsed, self.q1_center, self.q2_center,
+        args = (self.f, self.time_elapsed, self.q1_center, self.q2_center,
                 self.p1_center, self.p2_center, self.p3_center, 
                 self.physical_system.params
                )
@@ -390,57 +379,53 @@ class nonlinear_solver(object):
         if(self.physical_system.boundary_conditions.in_q1_left == 'dirichlet'):
             # If local zone includes the left physical boundary:
             if(i_q1_start == 0):
-                self.f_n.center[:, :, :N_g] = self.boundary_conditions.\
+                self.f[:, :, :N_g] = self.boundary_conditions.\
                                               f_left(*args)[:, :, :N_g]
     
         if(self.physical_system.boundary_conditions.in_q1_right == 'dirichlet'):
             # If local zone includes the right physical boundary:
             if(i_q1_end == self.N_q1 - 1):
-                self.f_n.center[:, :, -N_g:] = self.boundary_conditions.\
+                self.f[:, :, -N_g:] = self.boundary_conditions.\
                                                f_right(*args)[:, :, -N_g:]
 
         if(self.physical_system.boundary_conditions.in_q2_bottom == 'dirichlet'):
             # If local zone includes the bottom physical boundary:
             if(i_q2_start == 0):
-                self.f_n.center[:, :, :, :N_g] = self.boundary_conditions.\
+                self.f[:, :, :, :N_g] = self.boundary_conditions.\
                                                  f_bot(*args)[:, :, :, :N_g]
 
         if(self.physical_system.boundary_conditions.in_q2_top == 'dirichlet'):
             # If local zone includes the top physical boundary:
             if(i_q2_end == self.N_q2 - 1):
-                self.f_n.center[:, :, :, -N_g:] = self.boundary_conditions.\
+                self.f[:, :, :, -N_g:] = self.boundary_conditions.\
                                                   f_top(*args)[:, :, :, -N_g:]
 
         # Assigning the value to the PETSc Vecs(for dump at t = 0):
-        (af.flat(self.f_n.center)).to_ndarray(self._local_f_array)
-        (af.flat(self.f_n.center[:, :, N_g:-N_g, N_g:-N_g])).to_ndarray(self._glob_f_array)
+        (af.flat(self.f)).to_ndarray(self._local_f_array)
+        (af.flat(self.f[:, :, N_g:-N_g, N_g:-N_g])).to_ndarray(self._glob_f_array)
 
         # Assigning the function objects to methods of the solver:
         self._A_q = physical_system.A_q
         self._A_p = physical_system.A_p
 
         if(self.physical_system.params.energy_conserving):
-            # These are the terms used in the evolution of f_n:
-            self._C_q_n = physical_system.C_q_n
-            self._C_p_n = physical_system.C_p_n
-            
-            # These terms are used in the evolution of f_n_plus_half:
-            self._C_q_n_plus_half = physical_system.C_q_n_plus_half
-            self._C_p_n_plus_half = physical_system.C_p_n_plus_half
+            # These are the terms used in the evolution of f:
+            self._C_q = physical_system.C_q_energy_conserving
+            self._C_p = physical_system.C_p_energy_conserving
 
         else:
-            self._C_q_n_plus_half = physical_system.C_q_n_plus_half
-            self._C_p_n_plus_half = physical_system.C_p_n_plus_half
+            self._C_q = physical_system.C_q
+            self._C_p = physical_system.C_p
 
         # Source/Sink term:
         self._source = physical_system.source
 
         # Getting f at the cell edges:
         if(self.physical_system.params.energy_conserving == True):
-            get_f_cell_edges_q(self.f_n.center, True, self)
-            get_f_cell_edges_q(self.f_n_plus_half.center, False, self)
+            get_f_cell_edges_q(self.f, True, self)
+            get_f_cell_edges_q(self.f, False, self)
         else:
-            get_f_cell_edges_q(self.f_n_plus_half.center, False, self)
+            get_f_cell_edges_q(self.f, False, self)
 
 
     def _convert_to_q_expanded(self, array):
@@ -526,9 +511,7 @@ class nonlinear_solver(object):
                                 )
 
         # This is f(0):
-        self.f_n           = distribution_function(f_initial)
-        # It is assumed that f(-1/2) = f(0)
-        self.f_n_plus_half = distribution_function(f_initial)
+        self.f = f_initial
 
         if(self.physical_system.params.fields_enabled):
             
