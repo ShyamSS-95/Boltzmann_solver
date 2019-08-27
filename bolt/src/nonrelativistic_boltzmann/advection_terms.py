@@ -61,9 +61,9 @@ def A_q(t, q1, q2, v1, v2, v3, params):
 
 # Conservative Advection terms in q-space:
 # Used by the FVM solver:
-def C_q_n(t, q1, q2, v1, v2, v3, params):
+def C_q_energy_conserving(t, q1, q2, v1, v2, v3, params):
     """
-    Return the terms C_q1_n, C_q2_n.
+    Return the terms C_q1, C_q2.
 
     Parameters:
     -----------
@@ -93,9 +93,9 @@ def C_q_n(t, q1, q2, v1, v2, v3, params):
 
     return (C_q1, C_q2)
 
-def C_q_n_plus_half(t, q1, q2, v1, v2, v3, params):
+def C_q(t, q1, q2, v1, v2, v3, params):
     """
-    Return the terms C_q1_n_plus_half, C_q2_n_plus_half.
+    Return the terms C_q1, C_q2.
 
     Parameters:
     -----------
@@ -173,10 +173,10 @@ def A_p(t, q1, q2, v1, v2, v3,
 
 # Conservative Advection terms in p-space:
 # Used by the FVM solver:
-def C_p_n(t, q1, q2, v1, v2, v3,
-          fields_solver,
-          params, field_locations = 'center'
-         ):
+def C_p_energy_conserving(t, q1, q2, v1, v2, v3,
+                          fields_solver,
+                          params, field_locations = 'center'
+                         ):
     """
     Return the terms C_v1_n, C_v2_n and C_v3_n.
 
@@ -208,7 +208,7 @@ def C_p_n(t, q1, q2, v1, v2, v3,
     e = params.charge
     m = params.mass
 
-    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields(field_locations, True)
+    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields(field_locations)
 
     C_p1 = (v1**2 + v2**2 + v3**2) * (e/m) * (E1 + v2 * B3 - v3 * B2)
     C_p2 = (v1**2 + v2**2 + v3**2) * (e/m) * (E2 + v3 * B1 - v1 * B3)
@@ -216,10 +216,10 @@ def C_p_n(t, q1, q2, v1, v2, v3,
 
     return (C_p1, C_p2, C_p3)
 
-def C_p_n_plus_half(t, q1, q2, v1, v2, v3,
-                    fields_solver,
-                    params, field_locations = 'center'
-                   ):
+def C_p(t, q1, q2, v1, v2, v3,
+        fields_solver,
+        params, field_locations = 'center'
+       ):
     """
     Return the terms C_v1_n, C_v2_n and C_v3_n.
 
@@ -251,7 +251,7 @@ def C_p_n_plus_half(t, q1, q2, v1, v2, v3,
     e = params.charge
     m = params.mass
 
-    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields(field_locations, False)
+    E1, E2, E3, B1, B2, B3 = fields_solver.get_fields(field_locations)
 
     C_p1 = (e/m) * (E1 + v2 * B3 - v3 * B2)
     C_p2 = (e/m) * (E2 + v3 * B1 - v1 * B3)

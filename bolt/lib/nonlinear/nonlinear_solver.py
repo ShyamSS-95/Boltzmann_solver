@@ -421,12 +421,7 @@ class nonlinear_solver(object):
         self._source = physical_system.source
 
         # Getting f at the cell edges:
-        if(self.physical_system.params.energy_conserving == True):
-            get_f_cell_edges_q(self.f, True, self)
-            get_f_cell_edges_q(self.f, False, self)
-        else:
-            get_f_cell_edges_q(self.f, False, self)
-
+        get_f_cell_edges_q(self.f, self)
 
     def _convert_to_q_expanded(self, array):
         """
