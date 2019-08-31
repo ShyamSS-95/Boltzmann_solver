@@ -624,7 +624,7 @@ class fields_solver(object):
 
         # ADD SNES BELOW
 
-    def evolve_electrodynamic_fields(self, J1, J2, J3, at_n, dt):
+    def evolve_electrodynamic_fields(self, J1, J2, J3, dt):
         """
         Evolve the fields using FDTD.
         
@@ -664,7 +664,7 @@ class fields_solver(object):
         self.J2 = af.sum(J2, 1)
         self.J3 = af.sum(J3, 1)
 
-        if(at_n == True):
+        if(self.at_n == True):
             # Evolving:
             # (B_x^{n-1/2} , B_y^{n-1/2}, B_z^{n-1/2}) -->
             # (B_x^{n+1/2} , B_y^{n+1/2}, B_z^{n+1/2})
@@ -845,9 +845,4 @@ class fields_solver(object):
                                 + af.shift(self.cell_centered_EM_fields_at_n_plus_half[5], 0, 0, -1, 0) # (i + 1, j)
                                )
 
-        # This function is called once during every timestep:
-        # - First to evolve f^n -> f^* using field values at n
-        # - Then to evolve for f^n -> f^{n+1} using field values at n+1/2
-        # By this flag upon each call, this is taken care of:
-        self.at_n = not(self.at_n)
         return(E1, E2, E3, B1, B2, B3)

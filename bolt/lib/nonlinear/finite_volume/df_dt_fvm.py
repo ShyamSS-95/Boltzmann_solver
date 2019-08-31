@@ -113,7 +113,7 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
 
         elif(    self.physical_system.params.source_enabled == True 
              and self.physical_system.params.instantaneous_collisions == False
-             and self.physical_system.params.energy_conserving == False
+             and self.physical_system.params.energy_conserving == True
             ):
             df_dt += self._source.source_term_energy_conserving(self.f, self.time_elapsed, 
                                                                 self.q1_center, self.q2_center,
@@ -135,6 +135,7 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
                 self.fields_solver.compute_electrostatic_fields(rho)
 
         if(self.physical_system.params.fields_type == 'electrodynamic'):
+
             J1 = multiply(self.physical_system.params.charge,
                           self.compute_moments('mom_v1_bulk', f = self.f_q1_left_q2_center)
                          ) # (i, j + 1/2)
@@ -147,39 +148,46 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
                           self.compute_moments('mom_v3_bulk', f = f)
                          ) # (i + 1/2, j + 1/2)
 
-            self.fields_solver.evolve_electrodynamic_fields(J1, J2, J3, at_n, self.dt)
+            # This function is called twice during every timestep:
+            # - First to evolve f^n -> f^* using field values at n
+            # - Then to evolve for f^n -> f^{n+1} using field values at n+1/2
+            # By this flag upon each call, this is taken care of:
+            self.fields_solver.at_n = at_n
+            self.fields_solver.evolve_electrodynamic_fields(J1, J2, J3, self.dt)
 
         # Nicer variables for passing the arguments:
-        args_p_left = (self.time_elapsed, self.q1_center, self.q2_center,
-                        self.p1_left, self.p2_left, self.p3_left, self.fields_solver,
-                        self.physical_system.params, 'left_center'
-                        )
+        args_p_left = (self.time_elapsed, self.q1_left_center, self.q2_left_center,
+                       self.p1_left, self.p2_left, self.p3_left, self.fields_solver,
+                       self.physical_system.params, 'left_center'
+                      )
 
-        args_p_bottom = (self.time_elapsed, self.q1_center, self.q2_center,
-                            self.p1_bottom, self.p2_bottom, self.p3_bottom, self.fields_solver,
-                            self.physical_system.params, 'center_bottom'
+        args_p_bottom = (self.time_elapsed, self.q1_center_bot, self.q2_center_bot,
+                         self.p1_bottom, self.p2_bottom, self.p3_bottom, self.fields_solver,
+                         self.physical_system.params, 'center_bottom'
                         )                       
 
         args_p_back = (self.time_elapsed, self.q1_center, self.q2_center,
-                        self.p1_back, self.p2_back, self.p3_back,  self.fields_solver,
-                        self.physical_system.params
-                        )                       
+                       self.p1_back, self.p2_back, self.p3_back, self.fields_solver,
+                       self.physical_system.params
+                      )                       
 
-        if(at_n == True):
-            # Getting C_p at q1_left_q2_center:
-            self._C_p1_left_at_q1_left_q2_center \
-            = af.broadcast(self._C_p, *args_p_left)[0]
-            # Getting C_p at q1_center_q2_bot:
-            self._C_p2_bot_at_q1_center_q2_bot \
-            = af.broadcast(self._C_p, *args_p_bottom)[1]
-            # Getting C_p at q1_center_q2_center:
-            self._C_p3_back_at_q1_center_q2_center \
-            = af.broadcast(self._C_p, *args_p_back)[2]
+        # Getting C_p at q1_left_q2_center:
+        self._C_p1_left_at_q1_left_q2_center \
+        = af.broadcast(self._C_p, *args_p_left)[0]
+        # Getting C_p at q1_center_q2_bot:
+        self._C_p2_bot_at_q1_center_q2_bot \
+        = af.broadcast(self._C_p, *args_p_bottom)[1]
+        # Getting C_p at q1_center_q2_center:
+        self._C_p3_back_at_q1_center_q2_center \
+        = af.broadcast(self._C_p, *args_p_back)[2]
         
         # Converting all variables to p-expanded:(p1, p2, p3, s * q1 * q2)
-        self._C_p1_left_at_q1_left_q2_center   = self._convert_to_p_expanded(self._C_p1_left_at_q1_left_q2_center)
-        self._C_p2_bot_at_q1_center_q2_bot     = self._convert_to_p_expanded(self._C_p2_bot_at_q1_center_q2_bot)
-        self._C_p3_back_at_q1_center_q2_center = self._convert_to_p_expanded(self._C_p3_back_at_q1_center_q2_center)
+        self._C_p1_left_at_q1_left_q2_center   \
+        = self._convert_to_p_expanded(self._C_p1_left_at_q1_left_q2_center)
+        self._C_p2_bot_at_q1_center_q2_bot     \
+        = self._convert_to_p_expanded(self._C_p2_bot_at_q1_center_q2_bot)
+        self._C_p3_back_at_q1_center_q2_center \
+        = self._convert_to_p_expanded(self._C_p3_back_at_q1_center_q2_center)
 
         self.f_q1_left_q2_center = self._convert_to_p_expanded(self.f_q1_left_q2_center)
         self.f_q1_center_q2_bot  = self._convert_to_p_expanded(self.f_q1_center_q2_bot)
@@ -230,10 +238,10 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
 
         d_flux_p1_at_q1_left_q2_center_dp1 \
         = multiply(self._convert_to_q_expanded(  flux_p1_right_at_q1_left_q2_center \
-                                                - flux_p1_left_at_q1_left_q2_center
-                                                ),
-                    1 / self.dp1
-                    )    
+                                               - flux_p1_left_at_q1_left_q2_center
+                                              ),
+                   1 / self.dp1
+                  )    
 
         # For flux along p2 at q1_center_q2_bot:
         flux_p2_bot_at_q1_center_q2_bot \
@@ -254,48 +262,27 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
         = multiply(self._C_p3_back_at_q1_center_q2_center, f_p3_back_at_q1_center_q2_center)
 
         flux_p3_front_at_q1_center_q2_center \
-        = af.shift(flux_p3_back_at_q1_center_q2_center,  0,  0, -1)
+        = af.shift(flux_p3_back_at_q1_center_q2_center, 0, 0, -1)
 
         d_flux_p3_at_q1_center_q2_center_dp3 \
         = multiply(self._convert_to_q_expanded(  flux_p3_front_at_q1_center_q2_center \
-                                                - flux_p3_back_at_q1_center_q2_center
-                                                ),
-                    1 / self.dp3
-                    )
+                                               - flux_p3_back_at_q1_center_q2_center
+                                              ),
+                   1 / self.dp3
+                  )
 
         d_flux_p1_at_q1_right_q2_center_dp1 = af.shift(d_flux_p1_at_q1_left_q2_center_dp1, 0, 0, -1)
         d_flux_p2_at_q1_center_q2_top_dp2   = af.shift(d_flux_p2_at_q1_center_q2_bot_dp2, 0, 0, 0, -1)
 
-
         d_flux_p1_dp1 = 0.5 * (  d_flux_p1_at_q1_left_q2_center_dp1 
-                                + d_flux_p1_at_q1_right_q2_center_dp1
-                                )
+                               + d_flux_p1_at_q1_right_q2_center_dp1
+                              )
 
         d_flux_p2_dp2 = 0.5 * (  d_flux_p2_at_q1_center_q2_bot_dp2
-                                + d_flux_p2_at_q1_center_q2_top_dp2
-                                )
+                               + d_flux_p2_at_q1_center_q2_top_dp2
+                              )
 
         d_flux_p3_dp3 = d_flux_p3_at_q1_center_q2_center_dp3
-
-        # J1 = multiply(self.physical_system.params.charge,
-        #               self.compute_moments('mom_v1_bulk', f = self._convert_to_q_expanded(self.f_q1_left_q2_center))
-        #              ) # (i, j + 1/2)
-
-        # E1, E2, E3, B1, B2, B3 = self.fields_solver.get_fields('left_center')
-        # import pylab as pl
-        # pl.style.use('latexplot')
-        # pl.plot(af.flat(self.compute_moments('energy', f = self._convert_to_q_expanded(d_flux_p1_at_q1_left_q2_center_dp1))[0, 0, :, 0]), label = r'$\int \frac{eE|v|^2}{2} \frac{\partial f}{\partial v} dv$')
-        # pl.plot(-af.flat((E1 * J1)[0, 0, :, 0]), '--', color = 'black', label = r'$-J \cdot E$')
-        # pl.legend(bbox_to_anchor = (1, 1))
-        # pl.savefig('plot.png', bbox_inches = 'tight')
-        # pl.show()
-
-        # \int 0.5 * |v|^2 * F * df/dv
-        # print(af.sum(self.compute_moments('energy', f = self._convert_to_q_expanded(d_flux_p1_at_q1_left_q2_center_dp1))))
-
-        # -J.E
-        # print(-af.sum(E1 * J1))
-        # print(abs(-af.sum(E1 * J1) - af.sum(self.compute_moments('energy', f = self._convert_to_q_expanded(d_flux_p1_at_q1_left_q2_center_dp1)))))
 
         df_dt += -(d_flux_p1_dp1 + d_flux_p2_dp2 + d_flux_p3_dp3)
             
