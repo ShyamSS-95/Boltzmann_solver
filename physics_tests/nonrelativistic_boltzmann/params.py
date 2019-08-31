@@ -66,14 +66,14 @@ alpha = 0.0001
 
 # Time parameters:
 N_cfl   = 0.32
-t_final = 0.3
+t_final = 0.01
 
 # Switch for solver components:
 fields_enabled           = True
 source_enabled           = False
 instantaneous_collisions = False
 hybrid_model_enabled     = False
-energy_conserving        = True
+energy_conserving        = False
 
 # Variation of collisional-timescale parameter through phase space:
 @af.broadcast

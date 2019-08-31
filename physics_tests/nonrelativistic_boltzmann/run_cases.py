@@ -11,7 +11,7 @@ import physics_tests.nonrelativistic_boltzmann.params as params
 import physics_tests.nonrelativistic_boltzmann.initialize as initialize
 
 import bolt.src.nonrelativistic_boltzmann.advection_terms as advection_terms
-import bolt.src.nonrelativistic_boltzmann.collision_operator as collision_operator
+import bolt.src.nonrelativistic_boltzmann.sources as sources
 import bolt.src.nonrelativistic_boltzmann.moments as moments
 
 N = np.array([128, 192, 256, 384, 512]) #2**np.arange(5, 10)
@@ -57,9 +57,10 @@ def run_cases(q_dim, p_dim, charge_electron, tau):
                                  params,
                                  initialize,
                                  advection_terms,
-                                 collision_operator.BGK,
+                                 sources,
                                  moments
                                 )
+
 
         nls = nonlinear_solver(system)
         ls  = linear_solver(system)

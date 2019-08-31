@@ -30,33 +30,12 @@ N_g = system.N_ghost
 
 # Declaring the solver object which will evolve the defined physical system:
 nls = nonlinear_solver(system)
-# ls  = linear_solver(system)
-
 # Timestep as set by the CFL condition:
 dt = params.N_cfl * min(nls.dq1, nls.dq2) \
                   / max(domain.p1_end + domain.p2_end + domain.p3_end)
 
 time_array = np.arange(0, params.t_final + dt, dt)
-n_data_nls = np.zeros([time_array.size])
-# n_data_ls  = np.zeros([time_array.size])
-E_data_nls = np.zeros([time_array.size])
-# E_data_ls  = np.zeros([time_array.size])
-
-# Storing data at time t = 0:
-n_data_nls[0] = af.max(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g])
-# n_data_ls[0]  = af.max(ls.compute_moments('density'))
-
-# E_data_nls[0] = af.max(nls.fields_solver.cell_centered_EM_fields[:, :, N_g:-N_g, N_g:-N_g])
-
-# E1_ls = af.real(0.5 * (ls.N_q1 * ls.N_q2) 
-#                     * ifft2(ls.fields_solver.E1_hat)
-#                )
-
-# E_data_ls[0] = af.max(E1_ls)
-
-nls.dump_distribution_function('data_f0')
-nls.dump_moments('dump_moments/t=0.000')
-# nls.dump_EM_fields('dump_fields/t=0.000')
+n_data     = np.zeros([time_array.size])
 
 print('Error in Density')
 print(af.sum(af.abs(   nls.compute_moments('density') 
@@ -72,35 +51,15 @@ print(af.sum(af.abs(   nls.compute_moments('mom_v1_bulk') / nls.compute_moments(
             )
      )
 
+init_mass = af.sum(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g])
+
 for time_index, t0 in enumerate(time_array[1:]):
 
+    n_data[time_index] = af.max(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g])
+    # print(abs(af.sum(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g]) - init_mass))
     print('Computing For Time =', t0)
     nls.strang_timestep(dt)
-    # ls.RK5_timestep(dt)
 
-    n_data_nls[time_index + 1] = af.max(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g])
-    # n_data_ls[time_index + 1]  = af.max(ls.compute_moments('density'))
-    print(n_data_nls[time_index + 1])
-    # E_data_nls[time_index + 1] = \
-    #     af.max(nls.fields_solver.cell_centered_EM_fields[:, :, N_g:-N_g, N_g:-N_g])
-    # print(n_data_nls[time_index + 1])
-
-    # E1_ls = af.real(0.5 * (ls.N_q1 * ls.N_q2) 
-    #                     * ifft2(ls.fields_solver.E1_hat)
-    #                )
-
-    # E_data_ls[time_index + 1] = af.max(E1_ls)
-
-    nls.dump_moments('dump_moments/t=' + '%.3f'%t0)
-    nls.dump_moments('dump_moments2/t=' + '%.3f'%t0, 'left_center')
-    # nls.dump_EM_fields('dump_fields/t=' + '%.3f'%t0)
-
-nls.dump_distribution_function('data_f')
-
-# h5f = h5py.File('data.h5', 'w')
-# h5f.create_dataset('n_nls', data = n_data_nls)
-# h5f.create_dataset('n_ls', data = n_data_ls)
-# h5f.create_dataset('E_nls', data = E_data_nls)
-# h5f.create_dataset('E_ls', data = E_data_ls)
-# h5f.create_dataset('time', data = time_array)
-# h5f.close()
+import pylab as pl
+pl.plot(time_array[:-1], n_data[:-1])
+pl.savefig('plot.png', bbox_inches = 'tight')
