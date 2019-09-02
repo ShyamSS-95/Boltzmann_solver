@@ -67,13 +67,20 @@ def f0(v1, v2, v3, n, T, v1_bulk, v2_bulk, v3_bulk, params):
     af.eval(f0)
     return (f0)
 
-def source_term_energy_conserving(f, t, q1, q2, v1, v2, v3, moments, 
+def source_term_energy_conserving(f_left, f_bot, f_center, t, 
+                                  q1, q2, v1, v2, v3, moments, 
                                   fields_solver, params
                                  ):
     """
     Parameters:
     -----------
-    f : Distribution function array
+    f_left   : Distribution function array at left-center
+        shape:(N_v, N_s, N_q1, N_q2)
+
+    f_bot    : Distribution function array at center-bot
+        shape:(N_v, N_s, N_q1, N_q2)
+
+    f_center : Distribution function array at center of cell
         shape:(N_v, N_s, N_q1, N_q2)
     
     t : Time elapsed
@@ -100,18 +107,18 @@ def source_term_energy_conserving(f, t, q1, q2, v1, v2, v3, moments,
     params: The parameters file/object that is originally declared by the user.
             This can be used to inject other functions/attributes into the function
     """
-    n = moments('density', f)
+    n = moments('density', f_center)
     e = params.charge
     m = params.mass
 
     # Floor used to avoid 0/0 limit:
     eps = 1e-30
 
-    v1_bulk = moments('mom_v1_bulk', f) / (n + eps)
-    v2_bulk = moments('mom_v2_bulk', f) / (n + eps)
-    v3_bulk = moments('mom_v3_bulk', f) / (n + eps)
+    v1_bulk = moments('mom_v1_bulk', f_center) / (n + eps)
+    v2_bulk = moments('mom_v2_bulk', f_center) / (n + eps)
+    v3_bulk = moments('mom_v3_bulk', f_center) / (n + eps)
 
-    T = (1 / params.p_dim) * (  2 * multiply(moments('energy', f), m)
+    T = (1 / params.p_dim) * (  2 * multiply(moments('energy', f_center), m)
                                   - multiply(n, m) * v1_bulk**2
                                   - multiply(n, m) * v2_bulk**2
                                   - multiply(n, m) * v3_bulk**2
@@ -120,22 +127,48 @@ def source_term_energy_conserving(f, t, q1, q2, v1, v2, v3, moments,
     f_MB = f0(v1, v2, v3, n, T, v1_bulk, v2_bulk, v3_bulk, params)
     tau  = params.tau(q1, q2, v1, v2, v3)
 
-    C_f = -(f - f_MB) / tau
+    C_f = -(f_center - f_MB) / tau
 
-    E1_lc, E2_lc, E3_lc, B1_lc, B2_lc, B3_lc = fields_solver.get_fields('left_center', False)
-    E1_cb, E2_cb, E3_cb, B1_cb, B2_cb, B3_cb = fields_solver.get_fields('center_bottom', False)
-    E1_cc, E2_cc, E3_cc, B1_cc, B2_cc, B3_cc = fields_solver.get_fields('center', False)
+    E1_lc, E2_lc, E3_lc, B1_lc, B2_lc, B3_lc = fields_solver.get_fields('left_center')
+    E1_cb, E2_cb, E3_cb, B1_cb, B2_cb, B3_cb = fields_solver.get_fields('center_bottom')
+    E1_cc, E2_cc, E3_cc, B1_cc, B2_cc, B3_cc = fields_solver.get_fields('center')
 
-    # Source terms arising from formulation:
-    # 2e(E_x + v_y B_z - v_z B_y)v_x f / m + 2e(E_y + v_z B_x - v_x B_z)v_y f / m + 2e(E_z + v_x B_y - v_y B_x)v_z f / m
-    src_p1 =   multiply(multiply(e/m, add(E1, multiply(v2, B3) - multiply(v3, B2))), v1) * f \
-             + multiply(multiply(e/m, add(E1, multiply(v2, B3) - multiply(v3, B2))), v1) * f
+    # At right center:
+    E1_rc   = af.shift(E1_lc, 0, 0, -1)
+    E2_rc   = af.shift(E2_lc, 0, 0, -1)
+    E3_rc   = af.shift(E3_lc, 0, 0, -1)
+    B1_rc   = af.shift(B1_lc, 0, 0, -1)
+    B2_rc   = af.shift(B2_lc, 0, 0, -1)
+    B3_rc   = af.shift(B3_lc, 0, 0, -1)
+    f_right = af.shift(f_left, 0, 0, -1)
+
+    # At center top:
+    E1_ct = af.shift(E1_cb, 0, 0, 0, -1)
+    E2_ct = af.shift(E2_cb, 0, 0, 0, -1)
+    E3_ct = af.shift(E3_cb, 0, 0, 0, -1)
+    B1_ct = af.shift(B1_cb, 0, 0, 0, -1)
+    B2_ct = af.shift(B2_cb, 0, 0, 0, -1)
+    B3_ct = af.shift(B3_cb, 0, 0, 0, -1)
+
     
-    src_p2 =   multiply(multiply(e/m, add(E2, multiply(v3, B1) - multiply(v1, B3))), v2) * f \
-             + multiply(multiply(e/m, add(E2, multiply(v3, B1) - multiply(v1, B3))), v2) * f
+    # Source terms arising from formulation:
+    #   e(E_x + v_y B_z - v_z B_y)v_x f / m
+    # + e(E_y + v_z B_x - v_x B_z)v_y f / m
+    # + e(E_z + v_x B_y - v_y B_x)v_z f / m
+    src_p1 =   multiply(multiply(e/m, add(E1_lc, multiply(v2, B3_lc) - multiply(v3, B2_lc))), v1) * f_left \
+             + multiply(multiply(e/m, add(E1_rc, multiply(v2, B3_rc) - multiply(v3, B2_rc))), v1) * f_right
 
-    src_p3 =   multiply(multiply(e/m, add(E3, multiply(v1, B2) - multiply(v2, B1))), v3) * f \
-             + multiply(multiply(e/m, add(E3, multiply(v1, B2) - multiply(v2, B1))), v3) * f
+    src_p1 = src_p1 / 2
+    src_p2 = 0
+    src_p3 = 0
+#     src_p1 =   multiply(multiply(e/m, add(E1, multiply(v2, B3) - multiply(v3, B2))), v1) * f \
+#              + multiply(multiply(e/m, add(E1, multiply(v2, B3) - multiply(v3, B2))), v1) * f
+    
+#     src_p2 =   multiply(multiply(e/m, add(E2, multiply(v3, B1) - multiply(v1, B3))), v2) * f \
+#              + multiply(multiply(e/m, add(E2, multiply(v3, B1) - multiply(v1, B3))), v2) * f
+
+#     src_p3 =   multiply(multiply(e/m, add(E3, multiply(v1, B2) - multiply(v2, B1))), v3) * f \
+#              + multiply(multiply(e/m, add(E3, multiply(v1, B2) - multiply(v2, B1))), v3) * f
 
     return(C_f + src_p1 + src_p2 + src_p3)
 

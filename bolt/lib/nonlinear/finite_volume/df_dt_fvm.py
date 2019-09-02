@@ -115,12 +115,14 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
              and self.physical_system.params.instantaneous_collisions == False
              and self.physical_system.params.energy_conserving == True
             ):
-            df_dt += self._source.source_term_energy_conserving(self.f, self.time_elapsed, 
+            df_dt += self._source.source_term_energy_conserving(self.f_q1_left_q2_center, 
+                                                                self.f_q1_center_q2_bot,
+                                                                self.f, self.time_elapsed, 
                                                                 self.q1_center, self.q2_center,
                                                                 self.p1_center, self.p2_center, self.p3_center,
                                                                 self.compute_moments, self.fields_solver,
                                                                 self.physical_system.params
-                                                                )
+                                                               )
 
 
     if(    self.physical_system.params.solver_method_in_p == 'FVM' 
@@ -203,7 +205,7 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
         f_p1_left_at_q1_left_q2_center = riemann_solver(self, f_p1_left_minus_eps_at_q1_left_q2_center, 
                                                         f_p1_left_plus_eps_at_q1_left_q2_center, 
                                                         self._C_p1_left_at_q1_left_q2_center
-                                                        )
+                                                       )
 
         # Variation of p2 is along axis 1:
         f_p2_bot_plus_eps_at_q1_center_q2_bot, f_p2_top_minus_eps_at_q1_center_q2_bot \
@@ -213,9 +215,9 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
         f_p2_bot_minus_eps_at_q1_center_q2_bot  = af.shift(f_p2_top_minus_eps_at_q1_center_q2_bot, 0, 1)
 
         f_p2_bot_at_q1_center_q2_bot  = riemann_solver(self, f_p2_bot_minus_eps_at_q1_center_q2_bot, 
-                                                        f_p2_bot_plus_eps_at_q1_center_q2_bot, 
-                                                        self._C_p2_bot_at_q1_center_q2_bot
-                                                        )
+                                                       f_p2_bot_plus_eps_at_q1_center_q2_bot, 
+                                                       self._C_p2_bot_at_q1_center_q2_bot
+                                                      )
 
         # Variation of p3 is along axis 2:
         f_p3_back_plus_eps_at_q1_center_q2_center, f_p3_front_minus_eps_at_q1_center_q2_center \
@@ -225,9 +227,9 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
         f_p3_back_minus_eps_at_q1_center_q2_center = af.shift(f_p3_front_minus_eps_at_q1_center_q2_center, 0, 0, 1)
 
         f_p3_back_at_q1_center_q2_center = riemann_solver(self, f_p3_back_minus_eps_at_q1_center_q2_center, 
-                                                            f_p3_back_plus_eps_at_q1_center_q2_center, 
-                                                            self._C_p3_back_at_q1_center_q2_center
-                                                            )
+                                                          f_p3_back_plus_eps_at_q1_center_q2_center, 
+                                                          self._C_p3_back_at_q1_center_q2_center
+                                                         )
         
         # For flux along p1 at q1_left_q2_center:
         flux_p1_left_at_q1_left_q2_center \
@@ -252,10 +254,10 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
 
         d_flux_p2_at_q1_center_q2_bot_dp2 \
         = multiply(self._convert_to_q_expanded(  flux_p2_top_at_q1_center_q2_bot \
-                                                - flux_p2_bot_at_q1_center_q2_bot
-                                                ),
-                    1 / self.dp2
-                    )    
+                                               - flux_p2_bot_at_q1_center_q2_bot
+                                              ),
+                   1 / self.dp2
+                  )    
 
         # For flux along p3 at q1_center_q2_center:
         flux_p3_back_at_q1_center_q2_center \
@@ -300,4 +302,8 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
 
     else:
         af.eval(df_dt)
-        return(df_dt)
+        
+        if(self.physical_system.params.energy_conserving):
+            return(multiply(2 * df_dt, 1 / self.p1_center**2)) 
+        else:
+            return(df_dt)

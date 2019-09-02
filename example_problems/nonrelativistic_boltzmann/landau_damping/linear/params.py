@@ -70,10 +70,10 @@ t_final = 10.0
 
 # Switch for solver components:
 fields_enabled           = True
-source_enabled           = False
+source_enabled           = True
 instantaneous_collisions = False
 hybrid_model_enabled     = False
-energy_conserving        = False
+energy_conserving        = True
 
 # Variation of collisional-timescale parameter through phase space:
 @af.broadcast
