@@ -62,11 +62,11 @@ def fdtd_evolve_E(self, dt):
 
     else:
         # E1 --> (i, j + 1/2)
-        self.yee_grid_EM_fields[0] += (dt / (mu * eps)) * curlB_1 - self.J1 * dt / eps
+        self.yee_grid_EM_fields[0] += (dt / (mu * eps)) * curlB_1 * 0 - self.J1 * dt / eps
         # E2 --> (i + 1/2, j)
-        self.yee_grid_EM_fields[1] += (dt / (mu * eps)) * curlB_2 - self.J2 * dt / eps
+        self.yee_grid_EM_fields[1] += (dt / (mu * eps)) * curlB_2 * 0 - self.J2 * dt * 0 / eps
         # E3 --> (i + 1/2, j + 1/2)
-        self.yee_grid_EM_fields[2] += (dt / (mu * eps)) * curlB_3 - self.J3 * dt / eps
+        self.yee_grid_EM_fields[2] += (dt / (mu * eps)) * curlB_3 * 0 - self.J3 * dt * 0/ eps
 
         # USED TO CHECK:
         # curlB1_plus_q1 = af.shift(curlB_1, 0, 0, -1)

@@ -51,14 +51,40 @@ print(af.sum(af.abs(   nls.compute_moments('mom_v1_bulk') / nls.compute_moments(
             )
      )
 
-init_mass = af.sum(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g])
+E1_lc = nls.fields_solver.yee_grid_EM_fields[0]
+E1_rc = af.shift(E1_lc, 0, 0, -1)
+
+initial_mass           = af.sum(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g]) * nls.dq1
+initial_kinetic_energy = 0.5 * af.sum(nls.compute_moments('energy')[:, :, N_g:-N_g, N_g:-N_g]) * nls.dq1
+initial_em_energy      = 0.125 * af.sum(  E1_lc[:, :, N_g:-N_g, N_g:-N_g]**2 
+                                       + E1_rc[:, :, N_g:-N_g, N_g:-N_g]**2
+                                      ) * nls.dq1
+initial_total_energy   = initial_kinetic_energy + initial_em_energy
 
 for time_index, t0 in enumerate(time_array[1:]):
 
     n_data[time_index] = af.max(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g])
     # print(abs(af.sum(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g]) - init_mass))
-    print('Computing For Time =', t0)
+    # print('Computing For Time =', t0)
     nls.strang_timestep(dt)
+
+# nls.strang_timestep(dt)
+
+E1_lc = nls.fields_solver.yee_grid_EM_fields[0]
+E1_rc = af.shift(E1_lc, 0, 0, -1)
+
+final_mass           = af.sum(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g]) * nls.dq1
+final_kinetic_energy = 0.5 * af.sum(nls.compute_moments('energy')[:, :, N_g:-N_g, N_g:-N_g]) * nls.dq1
+final_em_energy      = 0.125 * af.sum(  E1_lc[:, :, N_g:-N_g, N_g:-N_g]**2 
+                                     + E1_rc[:, :, N_g:-N_g, N_g:-N_g]**2
+                                    ) * nls.dq1
+
+final_total_energy = final_kinetic_energy + final_em_energy
+
+print('Change in Mass:', (final_mass - initial_mass))
+print('Change in KE:', (final_kinetic_energy - initial_kinetic_energy))
+print('Change in EME:', (final_em_energy - initial_em_energy))
+print('Change in TE:', (final_total_energy - initial_total_energy))
 
 import pylab as pl
 pl.plot(time_array[:-1], n_data[:-1])

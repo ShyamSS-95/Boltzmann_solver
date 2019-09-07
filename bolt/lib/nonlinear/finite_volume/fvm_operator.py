@@ -18,9 +18,14 @@ def timestep_fvm(self, dt):
     dt : double
          Time-step size to evolve the system
     """
+    # Applying the boundary conditions:
+    self._communicate_f()
+    self._apply_bcs_f()
+
     f_initial = self.f.copy()
     self.f    = self.f + df_dt_fvm(self.f, True, self) * (dt / 2)
 
+    # Applying the boundary conditions:
     self._communicate_f()
     self._apply_bcs_f()
 
@@ -45,9 +50,6 @@ def op_fvm(self, dt):
     if(self.performance_test_flag == True):
         tic = af.time()
     
-    self._communicate_f()
-    self._apply_bcs_f()
-
     if(self.physical_system.params.instantaneous_collisions == True):
         split.strang(self, timestep_fvm, update_for_instantaneous_collisions, dt)
     else:
