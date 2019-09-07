@@ -66,7 +66,7 @@ alpha = 0.0001
 
 # Time parameters:
 N_cfl   = 0.1
-t_final = 1
+t_final = 5
 
 # Switch for solver components:
 fields_enabled           = True

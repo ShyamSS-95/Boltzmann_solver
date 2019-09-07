@@ -668,21 +668,19 @@ class fields_solver(object):
             # Evolving:
             # (B_x^{n-1/2} , B_y^{n-1/2}, B_z^{n-1/2}) -->
             # (B_x^{n+1/2} , B_y^{n+1/2}, B_z^{n+1/2})
-            pass
-            # self.yee_grid_EM_fields_at_n_minus_half[3:] = self.yee_grid_EM_fields[3:].copy()
-            # fdtd_evolve_B(self, dt)
-            # self.yee_grid_EM_fields_at_n_plus_half[3:]  = self.yee_grid_EM_fields[3:].copy()
+            self.yee_grid_EM_fields_at_n_minus_half[3:] = self.yee_grid_EM_fields[3:].copy()
+            fdtd_evolve_B(self, dt)
+            self.yee_grid_EM_fields_at_n_plus_half[3:]  = self.yee_grid_EM_fields[3:].copy()
             
-            # self.yee_grid_EM_fields_at_n[3:] = 0.5 * (  self.yee_grid_EM_fields_at_n_minus_half[3:]
-            #                                           + self.yee_grid_EM_fields_at_n_plus_half[3:]
-            #                                          )
-            # self.yee_grid_to_cell_centered_grid('n', 'B')
+            self.yee_grid_EM_fields_at_n[3:] = 0.5 * (  self.yee_grid_EM_fields_at_n_minus_half[3:]
+                                                      + self.yee_grid_EM_fields_at_n_plus_half[3:]
+                                                     )
+            self.yee_grid_to_cell_centered_grid('n', 'B')
 
         else:
             # Evolving:
             # (E_x^{n}   , E_y^{n}  , E_z^{n}) -->
             # (E_x^{n+1} , E_y^{n+1}, E_z^{n+1})
-
             self.yee_grid_EM_fields_at_n[:3] = self.yee_grid_EM_fields[:3].copy()
             fdtd_evolve_E(self, dt)
             self.yee_grid_EM_fields_at_n_plus_one[:3] = self.yee_grid_EM_fields[:3].copy()
@@ -690,7 +688,7 @@ class fields_solver(object):
             self.yee_grid_EM_fields_at_n_plus_half[:3] = 0.5 * (  self.yee_grid_EM_fields_at_n[:3]
                                                                 + self.yee_grid_EM_fields_at_n_plus_one[:3]
                                                                )
-            # self.yee_grid_to_cell_centered_grid('n_plus_half', 'E')
+            self.yee_grid_to_cell_centered_grid('n_plus_half', 'E')
 
         # Update time elapsed:
         self.time_elapsed += dt

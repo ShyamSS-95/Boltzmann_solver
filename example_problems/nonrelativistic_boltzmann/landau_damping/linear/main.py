@@ -47,29 +47,26 @@ print(af.sum(af.abs(   nls.compute_moments('density')
 E1_lc = nls.fields_solver.yee_grid_EM_fields[0]
 E1_rc = af.shift(E1_lc, 0, 0, -1)
 
-initial_mass           = af.sum(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g]) * nls.dq1
-initial_kinetic_energy = af.sum(nls.compute_moments('energy')[:, :, N_g:-N_g, N_g:-N_g]) * nls.dq1
-initial_em_energy      = 0.25 * af.sum(  E1_lc[:, :, N_g:-N_g, N_g:-N_g]**2 
-                                       + E1_rc[:, :, N_g:-N_g, N_g:-N_g]**2
+initial_mass           = af.sum(nls.compute_moments('density')[:, :, N_g:-N_g, N_g]) * nls.dq1
+initial_kinetic_energy = af.sum(nls.compute_moments('energy')[:, :, N_g:-N_g, N_g]) * nls.dq1
+initial_em_energy      = 0.25 * af.sum(  E1_lc[:, :, N_g:-N_g, N_g]**2 
+                                       + E1_rc[:, :, N_g:-N_g, N_g]**2
                                       ) * nls.dq1
 initial_total_energy   = initial_kinetic_energy + initial_em_energy
 
 for time_index, t0 in enumerate(time_array[1:]):
 
-#     n_data[time_index] = af.max(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g])
-#     # print(abs(af.sum(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g]) - init_mass))
+    n_data[time_index] = af.max(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g])
     print('Computing For Time =', t0)
     nls.strang_timestep(dt)
-
-nls.strang_timestep(dt)
 
 E1_lc = nls.fields_solver.yee_grid_EM_fields[0]
 E1_rc = af.shift(E1_lc, 0, 0, -1)
 
-final_mass           = af.sum(nls.compute_moments('density')[:, :, N_g:-N_g, N_g:-N_g]) * nls.dq1
-final_kinetic_energy = af.sum(nls.compute_moments('energy')[:, :, N_g:-N_g, N_g:-N_g]) * nls.dq1
-final_em_energy      = 0.25 * af.sum(  E1_lc[:, :, N_g:-N_g, N_g:-N_g]**2 
-                                     + E1_rc[:, :, N_g:-N_g, N_g:-N_g]**2
+final_mass           = af.sum(nls.compute_moments('density')[:, :, N_g:-N_g, N_g]) * nls.dq1
+final_kinetic_energy = af.sum(nls.compute_moments('energy')[:, :, N_g:-N_g, N_g]) * nls.dq1
+final_em_energy      = 0.25 * af.sum(  E1_lc[:, :, N_g:-N_g, N_g]**2 
+                                     + E1_rc[:, :, N_g:-N_g, N_g]**2
                                     ) * nls.dq1
 
 final_total_energy = final_kinetic_energy + final_em_energy

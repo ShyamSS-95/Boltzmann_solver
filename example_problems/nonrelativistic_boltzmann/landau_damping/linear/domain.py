@@ -10,8 +10,8 @@ q2_end   = 1 * l0
 N_q2     = 3
 
 # Velocity
-p1_start = [-15 * v0]
-p1_end   = [15  * v0]
+p1_start = [-12 * v0]
+p1_end   = [12  * v0]
 N_p1     = 64
 
 p2_start = [-0.5 * v0]
