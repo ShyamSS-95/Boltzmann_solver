@@ -17,7 +17,7 @@ def initialize_f(q1, q2, v1, v2, v3, params):
     n = n_b + params.alpha * af.cos(0.5 * q1)
     T = T_b + 0 * q1
 
-    v_bulk = params.alpha * af.sin(0.5 * q1)
+    v_bulk = 0 * params.alpha * af.sin(0.5 * q1)
 
     f = n * (m / (2 * np.pi * k * T))**(1 / 2) \
           * af.exp(-m * (v1 - v_bulk)**2 / (2 * k * T)) \
