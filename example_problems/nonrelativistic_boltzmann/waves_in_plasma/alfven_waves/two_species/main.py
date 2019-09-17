@@ -14,7 +14,7 @@ import initialize
 import params
 
 import bolt.src.nonrelativistic_boltzmann.advection_terms as advection_terms
-import bolt.src.nonrelativistic_boltzmann.collision_operator as collision_operator
+import bolt.src.nonrelativistic_boltzmann.sources as sources
 import bolt.src.nonrelativistic_boltzmann.moments as moments
 
 # Optimized plot parameters to make beautiful plots:
@@ -65,7 +65,7 @@ system = physical_system(domain,
                          params,
                          initialize,
                          advection_terms,
-                         collision_operator.BGK,
+                         sources,
                          moments
                         )
 
@@ -82,16 +82,17 @@ print('Error in density_i:', af.mean(af.abs(nls.compute_moments('density')[:, 1]
 v2_bulk = nls.compute_moments('mom_v2_bulk') / nls.compute_moments('density')
 v3_bulk = nls.compute_moments('mom_v3_bulk') / nls.compute_moments('density')
 
+
 v2_bulk_i =   params.amplitude * -4.801714581503802e-15 * af.cos(params.k_q1 * nls.q1_center) \
-            - params.amplitude * -0.3692429960259134 * af.sin(params.k_q1 * nls.q1_center)
+            - params.amplitude *  0.6363571202013185 * af.sin(params.k_q1 * nls.q1_center)
 
 v2_bulk_e =   params.amplitude * -4.85722573273506e-15 * af.cos(params.k_q1 * nls.q1_center) \
-            - params.amplitude * - 0.333061857862197* af.sin(params.k_q1 * nls.q1_center)
+            - params.amplitude * 0.10249033165518363 * af.sin(params.k_q1 * nls.q1_center)
 
-v3_bulk_i =   params.amplitude * -0.3692429960259359 * af.cos(params.k_q1 * nls.q1_center) \
+v3_bulk_i =   params.amplitude * 0.6363571202013188 * af.cos(params.k_q1 * nls.q1_center) \
             - params.amplitude * 1.8041124150158794e-16  * af.sin(params.k_q1 * nls.q1_center)
 
-v3_bulk_e =   params.amplitude * -0.333061857862222 * af.cos(params.k_q1 * nls.q1_center) \
+v3_bulk_e =   params.amplitude * 0.10249033165518295 * af.cos(params.k_q1 * nls.q1_center) \
             - params.amplitude * -3.885780586188048e-16 * af.sin(params.k_q1 * nls.q1_center)
 
 print('Error in v2_bulk_e:', af.mean(af.abs((v2_bulk[:, 0] - v2_bulk_e) / v2_bulk_e)))
@@ -114,6 +115,29 @@ else:
 assert(params.dt_dump_f > dt)
 assert(params.dt_dump_moments > dt)
 assert(params.dt_dump_fields > dt)
+
+# E  = return_moment_to_be_plotted('energy', moments_n)
+# Jx = return_moment_to_be_plotted('J1', moments_n2)
+
+# E1 = return_field_to_be_plotted('E1', fields_n)
+# E2 = return_field_to_be_plotted('E2', fields_n)
+# E3 = return_field_to_be_plotted('E3', fields_n)
+
+# B1_n_plus_half = return_field_to_be_plotted('B1', fields_n)
+# B2_n_plus_half = return_field_to_be_plotted('B2', fields_n)
+# B3_n_plus_half = return_field_to_be_plotted('B3', fields_n)
+
+# B1_n_minus_half = return_field_to_be_plotted('B1', fields_n_minus_one)
+# B2_n_minus_half = return_field_to_be_plotted('B2', fields_n_minus_one)
+# B3_n_minus_half = return_field_to_be_plotted('B3', fields_n_minus_one)
+
+# kinetic_energy_initial  = np.sum(E) * dq1 * dq2
+# electric_energy_initial = np.sum(E1**2 + E2**2 + E3**2) * params.eps / 2 * dq1 * dq2
+# magnetic_energy_initial = np.sum(  B1_n_minus_half * B1_n_plus_half 
+#                                  + B2_n_minus_half * B2_n_plus_half 
+#                                  + B3_n_minus_half * B3_n_plus_half
+#                                 ) / (2 * params.mu) * dq1 * dq2
+
 
 while(abs(time_elapsed - params.t_final) > 1e-5):
     

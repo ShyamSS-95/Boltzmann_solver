@@ -170,16 +170,16 @@ PETSc.Sys.Print("==================================================\n")
 
 # Switch for solver components:
 fields_enabled           = True
-source_enabled           = False
+source_enabled           = True
 instantaneous_collisions = False
 hybrid_model_enabled     = False
 energy_conserving        = True
 
 # File-writing Parameters:
 # Set to zero for no file-writing
-dt_dump_f       = 0.1 * t0
+dt_dump_f       = 1 * t0
 # ALWAYS set dump moments and dump fields at same frequency:
-dt_dump_moments = dt_dump_fields = 0.001 * t0
+dt_dump_moments = dt_dump_fields = 0.01 * t0
 
 # Restart(Set to zero for no-restart):
 t_restart = 0.0 * t0
