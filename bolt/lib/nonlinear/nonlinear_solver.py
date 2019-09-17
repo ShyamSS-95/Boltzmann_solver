@@ -45,13 +45,10 @@ from bolt.lib.utils.performance_timings import print_table
 from bolt.lib.utils.broadcasted_primitive_operations import multiply
 from bolt.lib.nonlinear.finite_volume.df_dt_fvm import get_f_cell_edges_q
 
-from bolt.lib.utils.calculate_q import \
-    calculate_q_center, calculate_q_left_center, \
-    calculate_q_center_bot, calculate_q_left_bot
+from bolt.lib.utils.calculate_q import calculate_q
 
-from bolt.lib.utils.calculate_p import \
-    calculate_p_center, calculate_p_left, \
-    calculate_p_bottom, calculate_p_back
+from bolt.lib.utils.calculate_p import calculate_p_center
+from bolt.lib.utils.calculate_p import calculate_p_corner
 
 from .compute_moments import compute_moments as compute_moments_imported
 from .fields.fields import fields_solver
@@ -131,8 +128,9 @@ class nonlinear_solver(object):
             af.set_device(self._comm.rank % self.physical_system.params.num_devices)
 
         # Getting number of species:
-        N_s = self.N_species = len(physical_system.params.mass)
+        N_s = self.N_species = self.physical_system.N_species
 
+        # TODO: Remove mass and charge from lib
         if(type(physical_system.params.mass) == list):
             # Having a temporary copy of the lists to copy to af.Array:
             list_mass   = physical_system.params.mass.copy()
@@ -177,8 +175,8 @@ class nonlinear_solver(object):
             self.time_apply_bcs_f   = 0
             self.time_communicate_f = 0
 
-        petsc_bc_in_q1 = 'ghosted'
-        petsc_bc_in_q2 = 'ghosted'
+        petsc_bc_in_q1 = 'ghosted'; self.N_g1 = self.N_ghost
+        petsc_bc_in_q2 = 'ghosted'; self.N_g2 = self.N_ghost
 
         # Only for periodic boundary conditions or shearing-box boundary conditions 
         # do the boundary conditions passed to the DA need to be changed. PETSc
@@ -196,6 +194,12 @@ class nonlinear_solver(object):
            or self.boundary_conditions.in_q2_bottom == 'shearing-box'
           ):
             petsc_bc_in_q2 = 'periodic'
+
+        if(self.boundary_conditions.in_q1_left == 'none'):
+            petsc_bc_in_q1 = 'none'; self.N_g1 = 0
+
+        if(self.boundary_conditions.in_q2_bottom == 'none'):
+            petsc_bc_in_q2 = 'none'; self.N_g2 = 0
 
         if(self.boundary_conditions.in_q1_left == 'periodic'):
             try:
@@ -226,6 +230,22 @@ class nonlinear_solver(object):
                 assert(self.boundary_conditions.in_q2_top == 'shearing-box')
             except:
                 raise Exception('Shearing box boundary conditions need to be applied to \
+                                 both the boundaries of a particular axis'
+                               )
+
+        if(self.boundary_conditions.in_q1_left == 'none'):
+            try:
+                assert(self.boundary_conditions.in_q1_right == 'none')
+            except:
+                raise Exception('NONE boundary conditions need to be applied to \
+                                 both the boundaries of a particular axis'
+                               )
+
+        if(self.boundary_conditions.in_q2_bottom == 'none'):
+            try:
+                assert(self.boundary_conditions.in_q2_top == 'none')
+            except:
+                raise Exception('NONE boundary conditions need to be applied to \
                                  both the boundaries of a particular axis'
                                )
 
@@ -295,33 +315,48 @@ class nonlinear_solver(object):
         PETSc.Object.setName(self._glob_f, 'distribution_function')
         PETSc.Object.setName(self._glob_moments, 'moments')
 
-        # Obtaining start coordinates for the local zone
-        # Additionally, we also obtain the size of the local zone
-        ((i_q1_start, i_q2_start), (N_q1_local, N_q2_local)) = self._da_f.getCorners()
-        # Obtaining the end coordinates for the local zone
-        (i_q1_end, i_q2_end) = (i_q1_start + N_q1_local - 1, i_q2_start + N_q2_local - 1)
+        # Indexing vars used through out
+        self.i_q1_start = self.N_g1; self.i_q1_end = -self.N_g1
+        self.i_q2_start = self.N_g2; self.i_q2_end = -self.N_g2
+        if (self.N_g1 == 0):
+            self.i_q1_end = 1
 
-        # Obtaining the array values of the cannonical variables:
-        self.q1_center, self.q2_center = \
-            calculate_q_center(self.q1_start + i_q1_start * self.dq1, 
-                               self.q2_start + i_q2_start * self.dq2,
-                               N_q1_local, N_q2_local, N_g,
-                               self.dq1, self.dq2
-                              )
+        if (self.N_g2 == 0):
+            self.i_q2_end = 1
 
-        self.q1_left_center, self.q2_left_center = \
-            calculate_q_left_center(self.q1_start + i_q1_start * self.dq1, 
-                                    self.q2_start + i_q2_start * self.dq2,
-                                    N_q1_local, N_q2_local, self.N_ghost,
-                                    self.dq1, self.dq2
-                                   )
+        # Get start (corner) indices of the local zone wrt global ordering and its size
+        ((_i_q1_start, _i_q2_start), (_N_q1_local, _N_q2_local)) = self._da_f.getCorners()
 
-        self.q1_center_bot, self.q2_center_bot = \
-            calculate_q_center_bot(self.q1_start + i_q1_start * self.dq1, 
-                                   self.q2_start + i_q2_start * self.dq2,
-                                   N_q1_local, N_q2_local, self.N_ghost,
-                                   self.dq1, self.dq2
-                                  )
+        # Coordinates of the local zone in a global coord system
+        self.q1_start_local = self.q1_start + _i_q1_start * self.dq1
+        self.q2_start_local = self.q2_start + _i_q2_start * self.dq2
+
+        self.N_q1_local = _N_q1_local
+        self.N_q2_local = _N_q2_local
+
+        self.N_q1_local_with_Ng = _N_q1_local + 2*self.N_g1
+        self.N_q2_local_with_Ng = _N_q2_local + 2*self.N_g2
+
+        # Obtaining the array values of spatial coordinates:
+        q_left_bot, q_center_bot, q_left_center, q_center = \
+            calculate_q(self.q1_start_local, 
+                        self.q2_start_local,
+                        self.N_q1_local, self.N_q2_local, 
+                        self.N_g1, self.N_g2,
+                        self.dq1, self.dq2
+                       )
+
+        self.q1_left_bot    = q_left_bot[0]
+        self.q2_left_bot    = q_left_bot[1]
+
+        self.q1_center_bot  = q_center_bot[0]
+        self.q2_center_bot  = q_center_bot[1]
+
+        self.q1_left_center = q_left_center[0]
+        self.q2_left_center = q_left_center[1]
+
+        self.q1_center      = q_center[0]
+        self.q2_center      = q_center[1]
 
         self.p1_center, self.p2_center, self.p3_center = \
             calculate_p_center(self.p1_start, self.p2_start, self.p3_start,
@@ -329,14 +364,8 @@ class nonlinear_solver(object):
                                self.dp1, self.dp2, self.dp3, 
                               )
 
-        self.p1_left, self.p2_left, self.p3_left = \
-            calculate_p_left(self.p1_start, self.p2_start, self.p3_start,
-                             self.N_p1, self.N_p2, self.N_p3,
-                             self.dp1, self.dp2, self.dp3, 
-                            )
-
-        self.p1_bottom, self.p2_bottom, self.p3_bottom = \
-            calculate_p_bottom(self.p1_start, self.p2_start, self.p3_start,
+        self.p1_left, self.p2_bottom, self.p3_back = \
+            calculate_p_corner(self.p1_start, self.p2_start, self.p3_start,
                                self.N_p1, self.N_p2, self.N_p3,
                                self.dp1, self.dp2, self.dp3, 
                               )
@@ -354,7 +383,7 @@ class nonlinear_solver(object):
         self.dp2 = af.moddims(af.to_array(np.array(self.dp2)), 1, self.N_species)
         self.dp3 = af.moddims(af.to_array(np.array(self.dp3)), 1, self.N_species)
 
-        # Converting p_start and p_end to af.Array:
+        # Need to do the same for the p1_start/end lists.
         self.p1_start = af.moddims(af.to_array(self.p1_start), 1, self.N_species)
         self.p2_start = af.moddims(af.to_array(self.p2_start), 1, self.N_species)
         self.p3_start = af.moddims(af.to_array(self.p3_start), 1, self.N_species)
@@ -363,6 +392,15 @@ class nonlinear_solver(object):
         self.p2_end = af.moddims(af.to_array(self.p2_end), 1, self.N_species)
         self.p3_end = af.moddims(af.to_array(self.p3_end), 1, self.N_species)
 
+        self.p2_left = self.p2_center
+        self.p3_left = self.p3_center
+
+        self.p1_bottom = self.p1_center
+        self.p3_bottom = self.p3_center
+
+        self.p1_back = self.p1_center
+        self.p2_back = self.p2_center
+        
         # Initialize according to initial condition provided by user:
         self._initialize(physical_system.params)
     
@@ -430,26 +468,22 @@ class nonlinear_solver(object):
         which can be used such that the computations may
         carried out along all dimensions necessary:
 
-        q_expanded form:(N_p1 * N_p2 * N_p3, N_s, N_q1, N_q2)
-        p_expanded form:(N_p1, N_p2, N_p3, N_s * N_q1 * N_q2)
+        q_expanded form:(N_p1 * N_p2 * N_p3, N_species, N_q1, N_q2)
+        p_expanded form:(N_p1, N_p2, N_p3, N_species * N_q1 * N_q2)
         
         This function converts the input array from
         p_expanded to q_expanded form.
         """
-        # Obtaining start coordinates for the local zone
-        # Additionally, we also obtain the size of the local zone
-        ((i_q1_start, i_q2_start), (N_q1_local, N_q2_local)) = self._da_f.getCorners()
      
         array = af.moddims(array,
                              self.N_p1 
                            * self.N_p2
                            * self.N_p3,
                            self.N_species,
-                           (N_q1_local + 2 * self.N_ghost),
-                           (N_q2_local + 2 * self.N_ghost)
+                           self.N_q1_local_with_Ng,
+                           self.N_q2_local_with_Ng
                           )
 
-        af.eval(array)
         return (array)
 
     def _convert_to_p_expanded(self, array):
@@ -459,24 +493,20 @@ class nonlinear_solver(object):
         which can be used such that the computations may
         carried out along all dimensions necessary:
 
-        q_expanded form:(N_p1 * N_p2 * N_p3, N_s, N_q1, N_q2)
-        p_expanded form:(N_p1, N_p2, N_p3, N_s * N_q1 * N_q2)
+        q_expanded form:(N_p1 * N_p2 * N_p3, N_species, N_q1, N_q2)
+        p_expanded form:(N_p1, N_p2, N_p3, N_species * N_q1 * N_q2)
         
         This function converts the input array from
         q_expanded to p_expanded form.
         """
-        # Obtaining start coordinates for the local zone
-        # Additionally, we also obtain the size of the local zone
-        ((i_q1_start, i_q2_start), (N_q1_local, N_q2_local)) = self._da_f.getCorners()
-        
+
         array = af.moddims(array,
                            self.N_p1, self.N_p2, self.N_p3,
                              self.N_species
-                           * (N_q1_local + 2 * self.N_ghost)
-                           * (N_q2_local + 2 * self.N_ghost)
+                           * self.N_q1_local_with_Ng
+                           * self.N_q2_local_with_Ng
                           )
 
-        af.eval(array)
         return (array)
 
     def _initialize(self, params):
@@ -519,8 +549,7 @@ class nonlinear_solver(object):
                                               )
             
     # Injection of solver functions into class as methods:
-    _communicate_f = communicate.\
-                     communicate_f
+    _communicate_f = communicate.communicate_f
     _apply_bcs_f   = boundaries.apply_bcs_f
 
     strang_timestep = timestep.strang_step
