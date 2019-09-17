@@ -35,10 +35,10 @@ class fields_solver(object):
         self.initialize = physical_system.initial_conditions
 
         q_left_bot, q_center_bot, q_left_center, q_center = \
-            calculate_q(self.q1_start_local, 
-                        self.q2_start_local,
-                        self.N_q1_local, self.N_q2_local, 
-                        self.N_g1, self.N_g2,
+            calculate_q(physical_system.q1_start, 
+                        physical_system.q2_start,
+                        self.N_q1, self.N_q2, 
+                        0, 0,
                         self.dq1, self.dq2
                        )
 
