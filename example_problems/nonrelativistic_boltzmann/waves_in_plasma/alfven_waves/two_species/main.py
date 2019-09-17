@@ -116,6 +116,46 @@ assert(params.dt_dump_f > dt)
 assert(params.dt_dump_moments > dt)
 assert(params.dt_dump_fields > dt)
 
+E1_lc = nls.fields_solver.yee_grid_EM_fields[0]
+E2_cb = nls.fields_solver.yee_grid_EM_fields[1]
+E3_cc = nls.fields_solver.yee_grid_EM_fields[2]
+
+B1_cb = nls.fields_solver.yee_grid_EM_fields[3]
+B2_lc = nls.fields_solver.yee_grid_EM_fields[4]
+B3_lb = nls.fields_solver.yee_grid_EM_fields[5]
+
+E1_rc = af.shift(E1_lc, 0, 0, -1)
+E2_ct = af.shift(E1_lc, 0, 0,  0, -1)
+
+B1_ct = af.shift(E1_lc, 0, 0,  0, -1)
+B2_rc = af.shift(E1_lc, 0, 0, -1)
+
+B3_rb = af.shift(E1_lc, 0, 0, -1)
+B3_lt = af.shift(E1_lc, 0, 0,  0, -1)
+B3_rt = af.shift(E1_lc, 0, 0, -1, -1)
+
+initial_mass           = af.sum(nls.compute_moments('density')[:, :, N_g:-N_g, N_g]) * nls.dq1
+initial_kinetic_energy = af.sum(nls.compute_moments('energy')[:, :, N_g:-N_g, N_g]) * nls.dq1
+initial_e_energy       = 0.25 * af.sum(  E1_lc[:, :, N_g:-N_g, N_g]**2 
+                                       + E1_rc[:, :, N_g:-N_g, N_g]**2
+                                       + E2_cb[:, :, N_g:-N_g, N_g]**2
+                                       + E2_ct[:, :, N_g:-N_g, N_g]**2
+                                       + 2 * E3_cc[:, :, N_g:-N_g, N_g]**2
+                                      ) * nls.dq1
+
+initial_m_energy       = 0.125 * af.sum(  2 * B1_cb[:, :, N_g:-N_g, N_g]**2 
+                                        + 2 * B1_ct[:, :, N_g:-N_g, N_g]**2
+                                        + 2 * B2_lc[:, :, N_g:-N_g, N_g]**2
+                                        + 2 * B2_rc[:, :, N_g:-N_g, N_g]**2
+                                        + B3_lb[:, :, N_g:-N_g, N_g]**2
+                                        + B3_lt[:, :, N_g:-N_g, N_g]**2
+                                        + B3_rb[:, :, N_g:-N_g, N_g]**2
+                                        + B3_rt[:, :, N_g:-N_g, N_g]**2
+                                       ) * nls.dq1
+
+initial_em_energy    = initial_e_energy + initial_m_energy
+initial_total_energy = initial_kinetic_energy + initial_em_energy
+
 # E  = return_moment_to_be_plotted('energy', moments_n)
 # Jx = return_moment_to_be_plotted('J1', moments_n2)
 
@@ -160,3 +200,50 @@ while(abs(time_elapsed - params.t_final) > 1e-5):
         nls.dump_distribution_function('dump_f/t=' + '%.3f'%time_elapsed)
 
     PETSc.Sys.Print('Computing For Time =', time_elapsed / params.t0, "|t0| units(t0)")
+
+E1_lc = nls.fields_solver.yee_grid_EM_fields[0]
+E2_cb = nls.fields_solver.yee_grid_EM_fields[1]
+E3_cc = nls.fields_solver.yee_grid_EM_fields[2]
+
+B1_cb = nls.fields_solver.yee_grid_EM_fields[3]
+B2_lc = nls.fields_solver.yee_grid_EM_fields[4]
+B3_lb = nls.fields_solver.yee_grid_EM_fields[5]
+
+E1_rc = af.shift(E1_lc, 0, 0, -1)
+E2_ct = af.shift(E1_lc, 0, 0,  0, -1)
+
+B1_ct = af.shift(E1_lc, 0, 0,  0, -1)
+B2_rc = af.shift(E1_lc, 0, 0, -1)
+
+B3_rb = af.shift(E1_lc, 0, 0, -1)
+B3_lt = af.shift(E1_lc, 0, 0,  0, -1)
+B3_rt = af.shift(E1_lc, 0, 0, -1, -1)
+
+final_mass           = af.sum(nls.compute_moments('density')[:, :, N_g:-N_g, N_g]) * nls.dq1
+final_kinetic_energy = af.sum(nls.compute_moments('energy')[:, :, N_g:-N_g, N_g]) * nls.dq1
+final_e_energy       = 0.25 * af.sum(  E1_lc[:, :, N_g:-N_g, N_g]**2 
+                                     + E1_rc[:, :, N_g:-N_g, N_g]**2
+                                     + E2_cb[:, :, N_g:-N_g, N_g]**2
+                                     + E2_ct[:, :, N_g:-N_g, N_g]**2
+                                     + 2 * E3_cc[:, :, N_g:-N_g, N_g]**2
+                                    ) * nls.dq1
+
+final_m_energy = 0.125 * af.sum(  2 * B1_cb[:, :, N_g:-N_g, N_g]**2 
+                                + 2 * B1_ct[:, :, N_g:-N_g, N_g]**2
+                                + 2 * B2_lc[:, :, N_g:-N_g, N_g]**2
+                                + 2 * B2_rc[:, :, N_g:-N_g, N_g]**2
+                                + B3_lb[:, :, N_g:-N_g, N_g]**2
+                                + B3_lt[:, :, N_g:-N_g, N_g]**2
+                                + B3_rb[:, :, N_g:-N_g, N_g]**2
+                                + B3_rt[:, :, N_g:-N_g, N_g]**2
+                               ) * nls.dq1
+
+final_em_energy    = final_e_energy + final_m_energy
+final_total_energy = final_kinetic_energy + final_em_energy
+
+print('Change in Mass:', (final_mass - initial_mass))
+print('Change in KE:', (final_kinetic_energy - initial_kinetic_energy))
+print('Change in EE:', (final_e_energy - initial_e_energy))
+print('Change in ME:', (final_m_energy - initial_m_energy))
+print('Change in EME:', (final_em_energy - initial_em_energy))
+print('Change in TE:', (final_total_energy - initial_total_energy))
