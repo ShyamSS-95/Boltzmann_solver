@@ -31,8 +31,11 @@ from bolt.lib.utils.bandwidth_test import bandwidth_test
 from bolt.lib.utils.print_with_indent import indent
 from bolt.lib.utils.broadcasted_primitive_operations import multiply
 from bolt.lib.utils.fft_funcs import fft2, ifft2
-from bolt.lib.utils.calculate_q import calculate_q_center
+from bolt.lib.utils.calculate_q import calculate_q
+
 from bolt.lib.utils.calculate_p import calculate_p_center
+from bolt.lib.utils.calculate_p import calculate_p_corner
+
 from bolt.lib.utils.calculate_k import calculate_k
 
 from . import timestep
@@ -155,11 +158,17 @@ class linear_solver(object):
         PETSc.Object.setName(self._glob_moments, 'moments')
 
         # Intializing position, velocity and wave number arrays:
-        self.q1_center, self.q2_center = \
-            calculate_q_center(self.q1_start, self.q2_start,
-                               self.N_q1, self.N_q2, 0,
-                               self.dq1, self.dq2
-                              )
+        # Obtaining the array values of spatial coordinates:
+        q_left_bot, q_center_bot, q_left_center, q_center = \
+            calculate_q(self.q1_start_local, 
+                        self.q2_start_local,
+                        self.N_q1_local, self.N_q2_local, 
+                        self.N_g1, self.N_g2,
+                        self.dq1, self.dq2
+                       )
+
+        self.q1_center = q_center[0]
+        self.q2_center = q_center[1]
 
         self.p1_center, self.p2_center, self.p3_center = \
             calculate_p_center(self.p1_start, self.p2_start, self.p3_start,

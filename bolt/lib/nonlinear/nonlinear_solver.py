@@ -370,12 +370,6 @@ class nonlinear_solver(object):
                                self.dp1, self.dp2, self.dp3, 
                               )
 
-        self.p1_back, self.p2_back, self.p3_back = \
-            calculate_p_back(self.p1_start, self.p2_start, self.p3_start,
-                             self.N_p1, self.N_p2, self.N_p3,
-                             self.dp1, self.dp2, self.dp3, 
-                            )
-
         self.p_squared_center = self.p1_center**2 + self.p2_center**2 + self.p3_center**2
 
         # Converting dp1, dp2, dp3 to af.Array:

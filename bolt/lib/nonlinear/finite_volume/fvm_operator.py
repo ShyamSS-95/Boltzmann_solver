@@ -19,8 +19,12 @@ def timestep_fvm(self, dt):
          Time-step size to evolve the system
     """
 
+    # Applying the boundary conditions:
     self._communicate_f()
     self._apply_bcs_f()
+
+    f_initial = self.f.copy()
+    self.f    = self.f + df_dt_fvm(self.f, True, self) * (dt / 2)
 
     # Applying the boundary conditions:
     self._communicate_f()
