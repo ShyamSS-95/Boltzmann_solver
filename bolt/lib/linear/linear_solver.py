@@ -84,7 +84,11 @@ class linear_solver(object):
         self.N_p1, self.dp1 = physical_system.N_p1, physical_system.dp1
         self.N_p2, self.dp2 = physical_system.N_p2, physical_system.dp2
         self.N_p3, self.dp3 = physical_system.N_p3, physical_system.dp3
-        
+
+        # Starting and ending indices:
+        self.i_q1_start = 0; self.i_q1_end = self.N_q1
+        self.i_q2_start = 0; self.i_q2_end = self.N_q2
+
         # Getting number of species:
         N_s = self.N_species = len(physical_system.params.mass)
 

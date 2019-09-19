@@ -5,6 +5,7 @@ import arrayfire as af
 import numpy as np
 from petsc4py import PETSc
 from bolt.lib.utils.fft_funcs import ifft2
+from bolt.lib.utils.af_petsc_conversion import af_to_petsc_glob_array
 
 def dump_moments(self, file_name):
     """
@@ -71,10 +72,11 @@ def dump_moments(self, file_name):
             array_to_dump = af.join(1, array_to_dump,
                                     self.compute_moments(attributes[i])
                                    )
-    
-    af.flat(array_to_dump).to_ndarray(self._glob_moments_array)
-    viewer = PETSc.Viewer().createHDF5(file_name + '.h5', 'w')
+
+    af_to_petsc_glob_array(self, array_to_dump, self._glob_moments_array)
+    viewer = PETSc.Viewer().createBinary(file_name + '.bin', 'w')
     viewer(self._glob_moments)
+    return
 
 def dump_distribution_function(self, file_name):
     """
@@ -119,10 +121,12 @@ def dump_distribution_function(self, file_name):
     >> solver.load_distribution_function('distribution_function')
     """
     array_to_dump = 0.5 * self.N_q2 * self.N_q1  * af.real(ifft2(self.f_hat))
-    array_to_dump.to_ndarray(self._glob_f_array)
-    
-    viewer = PETSc.Viewer().createHDF5(file_name + '.h5', 'w')
+    print(array_to_dump.shape)
+    af_to_petsc_glob_array(self, array_to_dump, self._glob_f_array)
+
+    viewer = PETSc.Viewer().createBinary(file_name + '.bin', 'w')
     viewer(self._glob_f)
+    return
 
 def dump_EM_fields(self, file_name):
     """
@@ -179,9 +183,12 @@ def dump_EM_fields(self, file_name):
     >> solver.load_EM_fields('data_EM_fields')
     """
     array_to_dump = 0.5 * self.N_q2 * self.N_q1  * af.real(ifft2(self.fields_solver.fields_hat))
-    array_to_dump.to_ndarray(self.fields_solver._glob_fields_array)
-    
-    viewer = PETSc.Viewer().createHDF5(file_name + '.h5', 'w')
+    af_to_petsc_glob_array(self, 
+                           array_to_dump,
+                           self.fields_solver._glob_fields_array
+                          )
+
+    viewer = PETSc.Viewer().createBinary(file_name + '.bin', 'w')
     viewer(self.fields_solver._glob_fields)
 
     return

@@ -1,5 +1,5 @@
-import numpy as np 
-import h5py
+import numpy as np
+from petsc4py import PETSc
 import matplotlib as mpl
 mpl.use('agg')
 import pylab as pl
@@ -34,6 +34,40 @@ pl.rcParams['ytick.color']      = 'k'
 pl.rcParams['ytick.labelsize']  = 'medium'
 pl.rcParams['ytick.direction']  = 'in'
 
+
+
+def return_f(file_name, N_q1, N_q2, N_p1, N_p2, N_p3):
+    """
+    Returns the distribution function in the desired format of 
+    (q1, q2, p1, p2, p3), when the file that is written by the 
+    dump_distribution_function is passed as the argument
+
+    Parameters
+    ----------
+
+    file_name : str
+                Pass the name of the file that needs to be read as
+                a string. This should be the file that is written by
+                dump_distribution_function
+    """
+    da_f  = PETSc.DMDA().create([N_q1, N_q2], 
+                             dof=(N_p1*N_p2*N_p3), stencil_width=0
+                           )
+    f_vec = da_f.createGlobalVec()
+
+    # When written using the routine dump_distribution_function, 
+    # distribution function gets written in the format (q2, q1, p1 * p2 * p3 * Ns)
+    viewer = PETSc.Viewer().createBinary(file_name, 
+                                         PETSc.Viewer.Mode.READ, 
+                                        )
+
+    f_vec.load(viewer)
+    f = da_f.getVecArray(f_vec) # [N_q1, N_q2, N_p1*N_p2*N_p3*N_s]
+
+    f = np.array(f[:]).reshape([N_q1, N_q2, N_p3, N_p2, N_p1])
+
+    return f
+
 # Checking the errors
 def check_convergence():
     N     = np.array([128, 192, 256, 384, 512]) #2**np.arange(7, 10)
@@ -41,13 +75,8 @@ def check_convergence():
     
     for i in range(N.size):
 
-        h5f   = h5py.File('dump_files/nlsf_' + str(N[i]) + '.h5')
-        nls_f = h5f['distribution_function'][:]
-        h5f.close()    
-
-        h5f  = h5py.File('dump_files/lsf_' + str(N[i]) + '.h5')
-        ls_f = h5f['distribution_function'][:]
-        h5f.close()
+        nls_f = return_f('dump_files/nlsf_' + str(N[i]) + '.bin', N[i], 3, N[i], 1, 1)
+        ls_f = return_f('dump_files/lsf_' + str(N[i]) + '.bin', N[i], 3, N[i], 1, 1)
 
         error[i] = np.mean(abs(nls_f - ls_f))
 

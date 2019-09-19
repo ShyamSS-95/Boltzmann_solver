@@ -25,7 +25,9 @@ def load_distribution_function(self, file_name):
     The above statemant will load the distribution function data stored in the file
     distribution_function.h5 into self.f
     """
-    viewer = PETSc.Viewer().createHDF5(file_name + '.h5', PETSc.Viewer.Mode.READ)
+    viewer = PETSc.Viewer().createBinary(file_name + '.bin', 
+                                         PETSc.Viewer.Mode.READ 
+                                        )
     self._glob_f.load(viewer)
     self.f_hat =   2 * fft2(af.to_array(self._glob_f_array.reshape(self.N_p1 * self.N_p2 * self.N_p3,
                                                                    self.N_species, self.N_q1, self.N_q2
@@ -51,8 +53,10 @@ def load_EM_fields(self, file_name):
     
     >> solver.load_EM_fields('data_EM_fields')
     """
-
-    viewer = PETSc.Viewer().createHDF5(file_name + '.h5', PETSc.Viewer.Mode.READ)
+    viewer = PETSc.Viewer().createBinary(file_name + '.bin', 
+                                         PETSc.Viewer.Mode.READ 
+                                        )
+    
     self.fields_solver._glob_fields.load(viewer)
 
     self.fields_solver.fields_hat = \
