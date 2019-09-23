@@ -520,6 +520,69 @@ class fields_solver(object):
                 self.yee_grid_EM_fields_at_n[1] = 0.5 * (E2 + af.shift(E2, 0, 0, 0, 1))  # (i+1/2, j)
                 self.yee_grid_EM_fields_at_n[2] = E3  # (i+1/2, j+1/2)
 
+            if(fields_to_transform == 'B' or fields_to_transform == None):
+                self.yee_grid_EM_fields_at_n[3] = 0.5 * (B1 + af.shift(B1, 0, 0, 0, 1)) # (i+1/2, j) 
+                self.yee_grid_EM_fields_at_n[4] = 0.5 * (B2 + af.shift(B2, 0, 0, 1, 0)) # (i, j+1/2)
+                self.yee_grid_EM_fields_at_n[5] = 0.25 * (  B3 
+                                                          + af.shift(B3, 0, 0, 1, 0)
+                                                          + af.shift(B3, 0, 0, 0, 1) 
+                                                          + af.shift(B3, 0, 0, 1, 1)
+                                                         ) # (i, j)
+
+            af.eval(self.yee_grid_EM_fields_at_n)
+
+        elif(time_level == 'n_plus_half'):
+
+            E1 = self.cell_centered_EM_fields_at_n_plus_half[0]
+            E2 = self.cell_centered_EM_fields_at_n_plus_half[1]
+            E3 = self.cell_centered_EM_fields_at_n_plus_half[2]
+
+            B1 = self.cell_centered_EM_fields_at_n_plus_half[3]
+            B2 = self.cell_centered_EM_fields_at_n_plus_half[4]
+            B3 = self.cell_centered_EM_fields_at_n_plus_half[5]
+
+            if(fields_to_transform == 'E' or fields_to_transform == None):
+                self.yee_grid_EM_fields_at_n_plus_half[0] = 0.5 * (E1 + af.shift(E1, 0, 0, 1, 0))  # (i, j+1/2)
+                self.yee_grid_EM_fields_at_n_plus_half[1] = 0.5 * (E2 + af.shift(E2, 0, 0, 0, 1))  # (i+1/2, j)
+                self.yee_grid_EM_fields_at_n_plus_half[2] = E3  # (i+1/2, j+1/2)
+
+            if(fields_to_transform == 'B' or fields_to_transform == None):
+                self.yee_grid_EM_fields_at_n_plus_half[3] = 0.5 * (B1 + af.shift(B1, 0, 0, 0, 1)) # (i+1/2, j) 
+                self.yee_grid_EM_fields_at_n_plus_half[4] = 0.5 * (B2 + af.shift(B2, 0, 0, 1, 0)) # (i, j+1/2)
+                self.yee_grid_EM_fields_at_n_plus_half[5] = 0.25 * (  B3 
+                                                                    + af.shift(B3, 0, 0, 1, 0)
+                                                                    + af.shift(B3, 0, 0, 0, 1) 
+                                                                    + af.shift(B3, 0, 0, 1, 1)
+                                                                   ) # (i, j)
+            
+            af.eval(self.yee_grid_EM_fields_at_n_plus_half)
+
+        else:
+
+            E1 = self.cell_centered_EM_fields[0]
+            E2 = self.cell_centered_EM_fields[1]
+            E3 = self.cell_centered_EM_fields[2]
+
+            B1 = self.cell_centered_EM_fields[3]
+            B2 = self.cell_centered_EM_fields[4]
+            B3 = self.cell_centered_EM_fields[5]
+
+            if(fields_to_transform == 'E' or fields_to_transform == None):
+                self.yee_grid_EM_fields[0] = 0.5 * (E1 + af.shift(E1, 0, 0, 1, 0))  # (i, j+1/2)
+                self.yee_grid_EM_fields[1] = 0.5 * (E2 + af.shift(E2, 0, 0, 0, 1))  # (i+1/2, j)
+                self.yee_grid_EM_fields[2] = E3  # (i+1/2, j+1/2)
+
+            if(fields_to_transform == 'B' or fields_to_transform == None):
+                self.yee_grid_EM_fields[3] = 0.5 * (B1 + af.shift(B1, 0, 0, 0, 1)) # (i+1/2, j) 
+                self.yee_grid_EM_fields[4] = 0.5 * (B2 + af.shift(B2, 0, 0, 1, 0)) # (i, j+1/2)
+                self.yee_grid_EM_fields[5] = 0.25 * (  B3 
+                                                    + af.shift(B3, 0, 0, 1, 0)
+                                                    + af.shift(B3, 0, 0, 0, 1) 
+                                                    + af.shift(B3, 0, 0, 1, 1)
+                                                    ) # (i, j)
+            
+            af.eval(self.yee_grid_EM_fields)
+
         return
 
     def yee_grid_to_cell_centered_grid(self, time_level = None, fields_to_transform = None):

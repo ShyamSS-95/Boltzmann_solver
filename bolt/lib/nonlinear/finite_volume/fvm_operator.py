@@ -32,6 +32,7 @@ def timestep_fvm(self, dt):
 
     self.f = f_initial + df_dt_fvm(self.f, False, self) * dt
 
+    af.eval(self.f)
     return
 
 def op_fvm(self, dt):

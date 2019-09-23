@@ -74,19 +74,9 @@ def check_convergence():
     
     for i in range(N.size):
 
-        # nls_f = return_f('dump_files/nlsf_' + str(N[i]) + '.bin', N[i], 3, N[i], 1, 1)
-        # ls_f = return_f('dump_files/lsf_' + str(N[i]) + '.bin', N[i], 3, N[i], 1, 1)
-
-        # error[i] = np.mean(abs(nls_f - ls_f))
-
-        h5f   = h5py.File('dump_files/nlsf_' + str(N[i]) + '.h5')
-        nls_f = h5f['distribution_function'][:]
-        h5f.close()    
-
-        h5f  = h5py.File('dump_files/lsf_' + str(N[i]) + '.h5')
-        ls_f = h5f['distribution_function'][:]
-        h5f.close()
-
+        nls_f = return_f('dump_files/nlsf_' + str(N[i]) + '.bin', N[i], 3, N[i], 1, 1)
+        ls_f = return_f('dump_files/lsf_' + str(N[i]) + '.bin', N[i], 3, N[i], 1, 1)
+        
         error[i] = np.mean(abs(nls_f - ls_f))
 
     print(error)
