@@ -297,3 +297,11 @@ class linear_solver(object):
 
     # Used to read the data from file
     load_distribution_function = load.load_distribution_function
+
+    # DEPRECATED VERSION (USED FOR SOME TESTINGs):
+    dump_distribution_function_hdf5 = dump.dump_distribution_function_hdf5
+    dump_moments_hdf5               = dump.dump_moments_hdf5
+    dump_EM_fields_hdf5             = dump.dump_EM_fields_hdf5
+
+    load_distribution_function_hdf5 = load.load_distribution_function_hdf5
+    load_EM_fields_hdf5             = load.load_EM_fields_hdf5

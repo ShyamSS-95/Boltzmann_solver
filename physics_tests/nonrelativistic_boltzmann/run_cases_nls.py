@@ -95,4 +95,4 @@ def run_cases(q_dim, p_dim, charge_electron, tau):
             if(time_index % 25 == 0):
                 nls.f = lowpass_filter(nls.f)
 
-        nls.dump_distribution_function('dump_files/nlsf_' + str(N[i]))
+        nls.dump_distribution_function_hdf5('dump_files/nlsf_' + str(N[i]))

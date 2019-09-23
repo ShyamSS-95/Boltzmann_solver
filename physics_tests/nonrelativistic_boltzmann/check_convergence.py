@@ -1,4 +1,5 @@
 import numpy as np
+import h5py
 from petsc4py import PETSc
 import matplotlib as mpl
 mpl.use('agg')
@@ -33,8 +34,6 @@ pl.rcParams['ytick.minor.pad']  = 8
 pl.rcParams['ytick.color']      = 'k'
 pl.rcParams['ytick.labelsize']  = 'medium'
 pl.rcParams['ytick.direction']  = 'in'
-
-
 
 def return_f(file_name, N_q1, N_q2, N_p1, N_p2, N_p3):
     """
@@ -75,8 +74,18 @@ def check_convergence():
     
     for i in range(N.size):
 
-        nls_f = return_f('dump_files/nlsf_' + str(N[i]) + '.bin', N[i], 3, N[i], 1, 1)
-        ls_f = return_f('dump_files/lsf_' + str(N[i]) + '.bin', N[i], 3, N[i], 1, 1)
+        # nls_f = return_f('dump_files/nlsf_' + str(N[i]) + '.bin', N[i], 3, N[i], 1, 1)
+        # ls_f = return_f('dump_files/lsf_' + str(N[i]) + '.bin', N[i], 3, N[i], 1, 1)
+
+        # error[i] = np.mean(abs(nls_f - ls_f))
+
+        h5f   = h5py.File('dump_files/nlsf_' + str(N[i]) + '.h5')
+        nls_f = h5f['distribution_function'][:]
+        h5f.close()    
+
+        h5f  = h5py.File('dump_files/lsf_' + str(N[i]) + '.h5')
+        ls_f = h5f['distribution_function'][:]
+        h5f.close()
 
         error[i] = np.mean(abs(nls_f - ls_f))
 

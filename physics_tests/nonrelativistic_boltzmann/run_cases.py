@@ -80,5 +80,5 @@ def run_cases(q_dim, p_dim, charge_electron, tau):
             n_nls = nls.compute_moments('density')
             n_ls  = ls.compute_moments('density')
 
-        nls.dump_distribution_function('dump_files/nlsf_' + str(N[i]))
-        ls.dump_distribution_function('dump_files/lsf_' + str(N[i]))
+        nls.dump_distribution_function_hdf5('dump_files/nlsf_' + str(N[i]))
+        ls.dump_distribution_function_hdf5('dump_files/lsf_' + str(N[i]))
