@@ -177,7 +177,7 @@ energy_conserving        = False
 
 # File-writing Parameters:
 # Set to zero for no file-writing
-dt_dump_f       = 1 * t0
+dt_dump_f       = 1000 * t0
 # ALWAYS set dump moments and dump fields at same frequency:
 dt_dump_moments = dt_dump_fields = 0.0001 * t0
 

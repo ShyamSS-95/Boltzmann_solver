@@ -73,7 +73,7 @@ for i in range(N.size):
             nls.strang_timestep(delta_dt)
             time_elapsed += delta_dt
     
-        if(math.modf(time_elapsed/params.dt_dump_f)[0] < 1e-5):
+        if(math.modf(time_elapsed/params.dt_dump_f)[0] < 1e-12):
             nls.dump_moments('dump_moments/144/t=' + '%.3f'%time_elapsed)
             nls.dump_EM_fields('dump_fields/144/t=' + '%.3f'%time_elapsed)
             nls.dump_distribution_function('dump_f/144/t=' + '%.3f'%time_elapsed)
