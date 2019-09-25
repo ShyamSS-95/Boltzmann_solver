@@ -13,7 +13,7 @@ import params
 import initialize
 
 import bolt.src.nonrelativistic_boltzmann.advection_terms as advection_terms
-import bolt.src.nonrelativistic_boltzmann.collision_operator as collision_operator
+import bolt.src.nonrelativistic_boltzmann.sources as sources
 import bolt.src.nonrelativistic_boltzmann.moments as moments
 
 N = 32 + 16 * np.arange(9)
@@ -39,12 +39,12 @@ for i in range(N.size):
 
     # Defining the physical system to be solved:
     system = physical_system(domain,
-                             boundary_conditions,
-                             params,
-                             initialize,
-                             advection_terms,
-                             collision_operator.BGK,
-                             moments
+                            boundary_conditions,
+                            params,
+                            initialize,
+                            advection_terms,
+                            sources,
+                            moments
                             )
 
     nls = nonlinear_solver(system)

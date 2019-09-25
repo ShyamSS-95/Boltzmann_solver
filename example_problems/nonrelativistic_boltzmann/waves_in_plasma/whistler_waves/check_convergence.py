@@ -1,11 +1,15 @@
 import numpy as np
-import h5py
+from petsc4py import PETSc
 import matplotlib as mpl 
 mpl.use('agg')
 import pylab as pl
 
 import domain as domain
 import params as params
+
+from post import return_moment_to_be_plotted
+from post import return_field_to_be_plotted
+from post import determine_min_max, q1, q2
 
 # Optimized plot parameters to make beautiful plots:
 pl.rcParams['figure.figsize']  = 12, 7.5
@@ -157,21 +161,47 @@ for i in range(N.size):
 
     dt        = min(dt_fvm, dt_fdtd)
 
-    h5f = h5py.File('dump_1/N_%04d'%(int(N[i])) + '.h5')
-    n_e = h5f['moments'][:][0, :, 0]
-    n_i = h5f['moments'][:][0, :, 1]
-    v_2e = h5f['moments'][:][0, :, 12] / n_e
-    v_2i = h5f['moments'][:][0, :, 13] / n_i
-    v_3e = h5f['moments'][:][0, :, 14] / n_e
-    v_3i = h5f['moments'][:][0, :, 15] / n_i
-    h5f.close()
+    moments_file = 'dump_1/N_%04d'%(int(N[i])) + '.bin'
+    fields_file  = 'dump_2/N_%04d'%(int(N[i])) + '.bin'
 
-    h5f = h5py.File('dump_2/N_%04d'%(int(N[i])) + '.h5')
-    E2  = h5f['EM_fields'][:][0, :, 1]
-    E3  = h5f['EM_fields'][:][0, :, 2]
-    B2  = h5f['EM_fields'][:][0, :, 4]
-    B3  = h5f['EM_fields'][:][0, :, 5]
-    h5f.close()
+    da_fields = PETSc.DMDA().create([int(N[i]), 3], 
+                                    dof=(6), stencil_width=0
+                                   )
+    fields_vec = da_fields.createGlobalVec()
+
+    da_moments = PETSc.DMDA().create([int(N[i]), 3], 
+                                    dof=(22), stencil_width=0
+                                    )
+    moments_vec = da_moments.createGlobalVec()
+
+    # Load moments
+    viewer = PETSc.Viewer().createBinary(moments_file, 
+                                         PETSc.Viewer.Mode.READ, 
+                                        )
+
+    moments_vec.load(viewer)
+    moments = da_moments.getVecArray(moments_vec) # [N_q1, N_q2, N_moments]
+
+    # Load fields
+    viewer = PETSc.Viewer().createBinary(fields_file, 
+                                         PETSc.Viewer.Mode.READ, 
+                                        )
+
+    fields_vec.load(viewer)
+    fields = da_fields.getVecArray(fields_vec) # [N_q1, N_q2, N_fields]
+
+    n_e = moments[:, 0, 0]
+    n_i = moments[:, 0, 1]
+    
+    v_2e = moments[:, 0, 12] / n_e
+    v_2i = moments[:, 0, 13] / n_i
+    v_3e = moments[:, 0, 14] / n_e
+    v_3i = moments[:, 0, 15] / n_i
+
+    E2  = fields[:, 0, 1]
+    E3  = fields[:, 0, 2]
+    B2  = fields[:, 0, 4]
+    B3  = fields[:, 0, 5]
 
     v2e_ana = v2e_analytic(q1 + dq1 / 2, params.t_final)
     v2i_ana = v2i_analytic(q1 + dq1 / 2, params.t_final)
