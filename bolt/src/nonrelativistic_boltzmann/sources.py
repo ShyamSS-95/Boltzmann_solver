@@ -166,11 +166,11 @@ def source_term_energy_conserving(f_left, f_bot, f_center, t,
     src_p1 = src_p1 / 2
 
     src_p2 =   multiply(multiply(e/m, add(E2_cb, 
-                                          multiply(v3, B1_lc) - multiply(v1, B3_lc)
+                                          multiply(v3, B1_cb) - multiply(v1, B3_cb)
                                          )
                                 ), v2) * f_bot \
              + multiply(multiply(e/m, add(E2_ct, 
-                                          multiply(v3, B1_rc) - multiply(v1, B3_rc)
+                                          multiply(v3, B1_ct) - multiply(v1, B3_ct)
                                          )), v2) * f_top
     src_p2 = src_p2 / 2
     src_p3 = multiply(multiply(e/m, add(E3_cc, multiply(v1, B2_cc) - multiply(v2, B1_cc))), v3) * f_center

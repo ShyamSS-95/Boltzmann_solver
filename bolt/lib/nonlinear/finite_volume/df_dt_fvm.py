@@ -94,8 +94,9 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
         right_flux = af.shift(left_flux, 0, 0, -1)
         top_flux   = af.shift(bot_flux,  0, 0,  0, -1)
         
-        df_dt += - (right_flux - left_flux) / self.dq1 
-
+        df_dt += - (right_flux - left_flux) / self.dq1 \
+                 - (top_flux - bot_flux) / self.dq2 
+        
     if(    self.physical_system.params.solver_method_in_p == 'FVM' 
        and self.physical_system.params.fields_enabled == True
       ):
@@ -259,7 +260,6 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
 
         df_dt += -(d_flux_p1_dp1 + d_flux_p2_dp2 + d_flux_p3_dp3)
 
-
     if(    self.physical_system.params.source_enabled == True 
        and self.physical_system.params.instantaneous_collisions == False
        and self.physical_system.params.energy_conserving == False
@@ -286,6 +286,8 @@ def df_dt_fvm(f, at_n, self, term_to_return = 'all'):
                                                             self.compute_moments, self.fields_solver,
                                                             self.physical_system.params
                                                            )
+
+        # print(af.sum(df_dt))
 
     if(term_to_return == 'd_flux_p1_dp1'):
         af.eval(d_flux_p1_dp1)
